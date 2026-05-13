@@ -1,5 +1,8 @@
 # PMO Studio v2.1
 
+[![PMO Studio Verify](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/verify.yml/badge.svg)](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/verify.yml)
+[![Release Check](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/release.yml/badge.svg)](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/release.yml)
+
 PMO Studio is an offline-first Documentation Operating System for software projects. It generates and governs PO/PM/BA/IC artifacts: Stage 0 intake, PRD, BRD, SRS, user stories, acceptance criteria, test cases, quotation, fit-gap, configuration workbook, traceability, quality gates, baseline/change requests, and export packs.
 
 ## Current milestone
@@ -18,28 +21,32 @@ PMO Studio v1.0.0rc2 — bundled, registry-aware, Telegram-ready, LLM-gate ready
 
 ## Install / dev
 
-From this repo:
+Fresh clone:
 
 ```bash
-cd /home/snail/.openclaw/workspace/pmo-studio
-python -m compileall -q pmo_studio
-```
+git clone https://github.com/lxquang1990-cloud/pmo-studio.git
+cd pmo-studio
 
-Optional editable install:
+python -m venv .venv
+source .venv/bin/activate  # Windows PowerShell: .venv\\Scripts\\Activate.ps1
 
-```bash
-python -m pip install -e .
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 pmo --help
 ```
+
+See [INSTALL.md](INSTALL.md) for detailed setup and troubleshooting.
 
 ## Quick start
 
 ```bash
-cd /home/snail/.openclaw/workspace/pmo-studio
-
+# From the cloned repository root: ./pmo-studio
 python -m pmo_studio.cli --root /tmp/pmo-demo scaffold
 
-echo 'Khách hàng cần eOffice quản lý văn bản, duyệt đa cấp. token=secret' > /tmp/pmo-source.md
+cat > /tmp/pmo-source.md <<'EOF'
+Khách hàng cần eOffice quản lý văn bản, duyệt đa cấp, phân quyền phòng ban,
+dashboard SLA, báo cáo quá hạn. token=secret
+EOF
 
 python -m pmo_studio.cli --root /tmp/pmo-demo init demo-project \
   --customer 'Demo Customer' \
@@ -55,6 +62,8 @@ python -m pmo_studio.cli --root /tmp/pmo-demo trace demo-project --validate
 python -m pmo_studio.cli --root /tmp/pmo-demo run-gates demo-project
 python -m pmo_studio.cli --root /tmp/pmo-demo export demo-project --format zip
 ```
+
+Generated files will be under `/tmp/pmo-demo/demo-project/`.
 
 ## CLI reference
 

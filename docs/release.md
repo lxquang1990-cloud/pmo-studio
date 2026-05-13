@@ -9,7 +9,7 @@ Current release candidate:
 ## Verify
 
 ```bash
-cd /home/snail/.openclaw/workspace/pmo-studio
+# From the cloned repository root: ./pmo-studio
 scripts/verify_all.sh /tmp/pmo-release-verify
 scripts/install_check.sh /tmp/pmo-install-check
 ```
