@@ -17,3 +17,8 @@ venv/
 # OS/editor
 .DS_Store
 *.swp
+
+# PMO Studio local runtime artifacts
+.pmo-studio-registry.json
+backups/
+runs/

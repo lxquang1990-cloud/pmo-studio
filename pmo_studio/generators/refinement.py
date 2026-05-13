@@ -32,6 +32,9 @@ def refine_markdown_artifact(path: Path, stage: str, llm: LLMClient, max_attempt
     gate_b = run_gate_b_or_c(path, stage, "B", reviewer=reviewer)
     attempts = 0
     writer = ArtifactWriter(llm, model=model)
+    if hasattr(llm, "timeout"):
+        # Refinement is best-effort; keep it short so generation exits cleanly.
+        setattr(llm, "timeout", min(int(getattr(llm, "timeout", 120) or 120), 45))
     while attempts < max_attempts and not (gate_a.passed and gate_b.passed):
         attempts += 1
         original = path.read_text(encoding="utf-8", errors="ignore")

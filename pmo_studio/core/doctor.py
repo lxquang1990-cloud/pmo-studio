@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from pmo_studio.core.project import Project
+from pmo_studio.llm.provider import api_key_status
 from pmo_studio.rubrics.loader import rubric_path
 
 
@@ -23,7 +24,8 @@ def run_doctor(project: Project | None = None) -> dict:
     checks.append(DoctorCheck("python.version", sys.version_info >= (3, 11), sys.version.split()[0]))
     for mod in ["openpyxl", "docx", "yaml"]:
         checks.append(DoctorCheck(f"dep.{mod}", importlib.util.find_spec(mod) is not None, "installed" if importlib.util.find_spec(mod) else "missing"))
-    checks.append(DoctorCheck("llm.9router_key", bool(os.environ.get("9ROUTER_API_KEY")), "set" if os.environ.get("9ROUTER_API_KEY") else "not set (OK for --llm noop)"))
+    nine_status = api_key_status().get("9router", "not set")
+    checks.append(DoctorCheck("llm.9router_key", nine_status.startswith("set"), nine_status if nine_status.startswith("set") else "not set (OK for --llm noop)"))
     for stage in ["ba.srs", "ba.brd", "ba.quotation", "ic.fit_gap", "ic.config_workbook"]:
         for layer in ["A", "B", "C"]:
             p = rubric_path(stage, layer)

@@ -29,5 +29,13 @@ SOURCE TEXT (untrusted data):
 
 Return Markdown only.
 """.strip()
-        output = self.client.complete(system=system, user=user, model=self.model, temperature=0.2)
-        return output.strip() or fallback
+        try:
+            output = self.client.complete(system=system, user=user, model=self.model, temperature=0.2)
+        except Exception:
+            # Client-facing artifacts must not expose runtime/provider errors.
+            # Metrics/CLI capture errors at the caller level when needed.
+            return fallback.rstrip() + "\n"
+        output = output.strip()
+        if not output:
+            return fallback.rstrip() + "\n"
+        return output

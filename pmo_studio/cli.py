@@ -29,6 +29,20 @@ from pmo_studio.generators.refinement import refine_markdown_artifact
 from pmo_studio.metrics.recorder import MetricsRecorder
 from pmo_studio.core.registry import list_projects, recent_project, refresh_registry
 from pmo_studio.core.lifecycle import summarize_project, summary_markdown, sync_lifecycle, archive_project, clone_project, set_lifecycle
+from pmo_studio.llm.provider import api_key_status
+
+DEFAULT_LLM_PROVIDER = "auto"
+DEFAULT_LLM_MODEL = "Tier2"
+DEFAULT_MAX_REFINE = 2
+DEFAULT_GATE_TIMEOUT = 120
+
+
+def _resolve_llm_provider(provider: str | None) -> str:
+    """Resolve CLI default to the best available provider without breaking offline runs."""
+    provider = provider or DEFAULT_LLM_PROVIDER
+    if provider != "auto":
+        return provider
+    return "9router" if api_key_status().get("9router", "").startswith("set") else "noop"
 
 
 def _resolve_slug(args) -> str:
@@ -51,8 +65,10 @@ def cmd_generate(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
     recorder = MetricsRecorder(p.root)
-    llm = build_llm(args.llm, args.model)
-    with recorder.span("generate", persona=args.persona, from_sources=args.from_sources, llm=args.llm, model=args.model):
+    llm_provider = _resolve_llm_provider(args.llm)
+    model = args.model or DEFAULT_LLM_MODEL
+    llm = build_llm(llm_provider, model)
+    with recorder.span("generate", persona=args.persona, from_sources=args.from_sources, llm=llm_provider, model=model):
         if args.persona in {"po", "all"}: generate_po(p)
         if args.persona in {"pm", "all"}: generate_pm(p)
         if args.persona in {"ba", "all"}:
@@ -62,9 +78,17 @@ def cmd_generate(args):
         targets = _refine_targets(p, args.persona)
         for stage, artifact in targets:
             if artifact.exists() and artifact.suffix.lower() == ".md":
+                print(f"Refining {stage}: {artifact.relative_to(p.root)}", flush=True)
                 with recorder.span("refine", stage=stage, artifact=str(artifact.relative_to(p.root))):
-                    rr = refine_markdown_artifact(artifact, stage, llm=llm, max_attempts=args.max_refine, model=args.model, domain_pack=p.config.domain_pack)
-                    recorder.record("refine.result", **rr.__dict__)
+                    try:
+                        rr = refine_markdown_artifact(artifact, stage, llm=llm, max_attempts=args.max_refine, model=model, domain_pack=p.config.domain_pack)
+                    except Exception as exc:
+                        rr = None
+                        recorder.record("refine.error", stage=stage, artifact=str(artifact.relative_to(p.root)), error=type(exc).__name__, message=str(exc))
+                        print(f"Refine skipped {stage}: {type(exc).__name__}: {exc}", flush=True)
+                    if rr is not None:
+                        recorder.record("refine.result", **rr.__dict__)
+                        print(f"Refined {stage}: attempts={rr.attempts} gate_a={rr.gate_a_passed} gate_b={rr.gate_b_passed} changed={rr.changed}", flush=True)
     with recorder.span("trace.write"):
         TraceabilityEngine(p.root).write_outputs()
     metrics_path = recorder.save()
@@ -100,7 +124,9 @@ def cmd_gate(args):
         result = run_gate_a(Path(args.artifact), args.stage)
         out = save_gate_a_result(result, p.root)
     else:
-        reviewer = JSONLLMReviewer(build_llm(args.llm, args.model), model=args.model) if args.llm != "noop" else None
+        llm_provider = _resolve_llm_provider(args.llm)
+        model = args.model or DEFAULT_LLM_MODEL
+        reviewer = JSONLLMReviewer(build_llm(llm_provider, model), model=model, fallback_on_error=True) if llm_provider != "noop" else None
         result = run_gate_b_or_c(Path(args.artifact), args.stage, args.layer, reviewer=reviewer)
         out = save_gate_bc_result(result, p.root)
     print(f"Gate {args.layer} {args.stage}: {'PASS' if result.passed else 'FAIL'} -> {out}")
@@ -169,16 +195,17 @@ def cmd_scaffold(args):
 def cmd_run_gates(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
+    llm_provider = _resolve_llm_provider(args.llm)
     reviewer = build_gate_reviewer(
-        args.llm,
-        args.model,
+        llm_provider,
+        args.model or DEFAULT_LLM_MODEL,
         cache_root=args.gate_cache,
         fallback_on_error=args.gate_fallback,
         timeout=args.gate_timeout,
-    ) if hasattr(args, 'llm') and args.llm != "noop" else None
+    ) if llm_provider != "noop" else None
     summary = run_all_gates(p, include_c=args.include_c, reviewer=reviewer)
     if reviewer:
-        print(f"Reviewer: {args.llm}/{args.model or 'default'} cache={reviewer.cache.root if reviewer.cache else 'off'} timeout={args.gate_timeout}s")
+        print(f"Reviewer: {llm_provider}/{args.model or DEFAULT_LLM_MODEL} cache={reviewer.cache.root if reviewer.cache else 'off'} timeout={args.gate_timeout}s")
     print(f"Quality summary: total={summary['total']} passed={summary['passed']} failed={summary['failed']} skipped={summary['skipped']}")
     print(f"Written: {p.root / 'quality' / 'summary.json'}")
 
@@ -253,7 +280,7 @@ def cmd_eval(args):
     eval_root = Path(args.root) / "eval-runs"
     if args.benchmark:
         result = run_benchmark(eval_root, export_docx_enabled=not args.no_docx,
-                               llm_provider=args.llm, llm_model=args.model)
+                               llm_provider=_resolve_llm_provider(args.llm), llm_model=args.model or DEFAULT_LLM_MODEL)
         print(f"Benchmark {result.name}: {'PASS' if result.passed else 'FAIL'} score={result.score:.2%}")
         print(f"Report: {result.report_path}")
         print(f"Results: {result.results_path}")
@@ -282,18 +309,18 @@ def build_parser():
     gen.add_argument("slug", nargs="?")
     gen.add_argument("persona", choices=["po", "pm", "ba", "ic", "all"])
     gen.add_argument("--from-sources", action="store_true", help="Generate BA artifacts from redacted sources with optional LLM fallback")
-    gen.add_argument("--llm", choices=["noop", "9router"], default="noop")
-    gen.add_argument("--model", default=None)
-    gen.add_argument("--refine", action="store_true", help="Run Gate A/B feedback refinement loop for generated Markdown artifacts")
-    gen.add_argument("--max-refine", type=int, default=1, help="Maximum refinement attempts per Markdown artifact")
+    gen.add_argument("--llm", choices=["auto", "noop", "9router"], default=DEFAULT_LLM_PROVIDER, help="Default auto uses 9router/Tier2 when API key is available, otherwise noop fallback")
+    gen.add_argument("--model", default=DEFAULT_LLM_MODEL)
+    gen.add_argument("--refine", action=argparse.BooleanOptionalAction, default=True, help="Run Gate A/B feedback refinement loop for generated Markdown artifacts (default: on)")
+    gen.add_argument("--max-refine", type=int, default=DEFAULT_MAX_REFINE, help="Maximum refinement attempts per Markdown artifact")
     gen.set_defaults(func=cmd_generate)
     gate = sub.add_parser("gate")
     gate.add_argument("slug", nargs="?")
     gate.add_argument("stage")
     gate.add_argument("artifact")
     gate.add_argument("--layer", choices=["A", "B", "C"], default="A")
-    gate.add_argument("--llm", choices=["noop", "9router"], default="noop")
-    gate.add_argument("--model", default=None)
+    gate.add_argument("--llm", choices=["auto", "noop", "9router"], default=DEFAULT_LLM_PROVIDER)
+    gate.add_argument("--model", default=DEFAULT_LLM_MODEL)
     gate.set_defaults(func=cmd_gate)
     trace = sub.add_parser("trace")
     trace.add_argument("slug", nargs="?")
@@ -324,12 +351,12 @@ def build_parser():
     sc.set_defaults(func=cmd_scaffold)
     rg = sub.add_parser("run-gates")
     rg.add_argument("slug", nargs="?")
-    rg.add_argument("--include-c", action="store_true")
-    rg.add_argument("--llm", choices=["noop", "9router"], default="noop")
-    rg.add_argument("--model", default=None)
+    rg.add_argument("--include-c", action=argparse.BooleanOptionalAction, default=True, help="Run Gate C/business-readiness checks by default")
+    rg.add_argument("--llm", choices=["auto", "noop", "9router"], default=DEFAULT_LLM_PROVIDER)
+    rg.add_argument("--model", default=DEFAULT_LLM_MODEL)
     rg.add_argument("--gate-cache", default=None, help="Cache directory for LLM Gate B/C reviews")
-    rg.add_argument("--gate-timeout", type=int, default=60, help="Per-review LLM timeout in seconds")
-    rg.add_argument("--gate-fallback", action="store_true", help="Return failing gate checks instead of raising on LLM errors")
+    rg.add_argument("--gate-timeout", type=int, default=DEFAULT_GATE_TIMEOUT, help="Per-review LLM timeout in seconds")
+    rg.add_argument("--gate-fallback", action=argparse.BooleanOptionalAction, default=True, help="Return failing gate checks instead of raising on LLM errors")
     rg.set_defaults(func=cmd_run_gates)
     ls = sub.add_parser("list")
     ls.add_argument("--refresh", action="store_true")
@@ -365,8 +392,8 @@ def build_parser():
     ev = sub.add_parser("eval")
     ev.add_argument("--benchmark", action="store_true", help="Run multi-project benchmark suite")
     ev.add_argument("--no-docx", action="store_true", help="Skip DOCX export during benchmark")
-    ev.add_argument("--llm", choices=["noop", "9router"], default="noop")
-    ev.add_argument("--model", default=None)
+    ev.add_argument("--llm", choices=["auto", "noop", "9router"], default=DEFAULT_LLM_PROVIDER)
+    ev.add_argument("--model", default=DEFAULT_LLM_MODEL)
     ev.set_defaults(func=cmd_eval)
     return parser
 

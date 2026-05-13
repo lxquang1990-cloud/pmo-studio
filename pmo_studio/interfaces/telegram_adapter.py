@@ -26,7 +26,21 @@ from pmo_studio.exporters.bundle import export_bundle
 from pmo_studio.eval.runner import run_benchmark
 from pmo_studio.core.doctor import run_doctor
 from pmo_studio.llm.factory import build_llm
+from pmo_studio.llm.provider import api_key_status
+from pmo_studio.llm.reviewer import build_gate_reviewer
 from pmo_studio.generators.refinement import refine_markdown_artifact
+
+DEFAULT_LLM_PROVIDER = "auto"
+DEFAULT_LLM_MODEL = "Tier2"
+DEFAULT_MAX_REFINE = 2
+DEFAULT_GATE_TIMEOUT = 120
+
+
+def _resolve_llm_provider(provider: str | None) -> str:
+    provider = provider or DEFAULT_LLM_PROVIDER
+    if provider != "auto":
+        return provider
+    return "9router" if api_key_status().get("9router", "").startswith("set") else "noop"
 
 
 @dataclass
@@ -68,7 +82,7 @@ def handle_command_structured(text: str, root: Path = DEFAULT_ROOT, approved: bo
         if cmd == "generate": return _cmd_generate(parts, root)
         if cmd in {"generate-ba", "ba"}:
             slug = _slug_arg(parts, root)
-            return _cmd_generate([parts[0], "generate", slug, "ba", "--from-sources", "--refine"], root)
+            return _cmd_generate([parts[0], "generate", slug, "ba", "--from-sources"], root)
         if cmd in {"gates", "run-gates"}: return _cmd_gates(parts, root)
         if cmd == "trace": return _cmd_trace(parts, root)
         if cmd == "status": return _cmd_status(parts, root)
@@ -103,9 +117,9 @@ def _cmd_generate(parts: list[str], root: Path) -> CommandResponse:
     slug = _slug_arg(parts, root)
     persona = parts[3] if len(parts) > 3 and not parts[3].startswith("--") else "all"
     from_sources = "--from-sources" in parts
-    refine = "--refine" in parts
-    llm_name = _opt(parts, "--llm", "noop")
-    model = _opt(parts, "--model", None)
+    refine = "--no-refine" not in parts
+    llm_name = _resolve_llm_provider(_opt(parts, "--llm", DEFAULT_LLM_PROVIDER))
+    model = _opt(parts, "--model", DEFAULT_LLM_MODEL)
     p = Project.load(slug, root_base=root)
     llm = build_llm(llm_name, model)
     if persona in {"po", "all"}: generate_po(p)
@@ -116,7 +130,7 @@ def _cmd_generate(parts: list[str], root: Path) -> CommandResponse:
     if refine:
         for stage, artifact in _refine_targets(p, persona):
             if artifact.exists():
-                r = refine_markdown_artifact(artifact, stage, llm=llm, max_attempts=int(_opt(parts, "--max-refine", "1")), model=model, domain_pack=p.config.domain_pack)
+                r = refine_markdown_artifact(artifact, stage, llm=llm, max_attempts=int(_opt(parts, "--max-refine", str(DEFAULT_MAX_REFINE))), model=model, domain_pack=p.config.domain_pack)
                 refined.append(f"{stage}:{'PASS' if r.gate_b_passed else 'WARN'}")
     TraceabilityEngine(p.root).write_outputs()
     suffix = "\nRefine: " + ", ".join(refined) if refined else ""
@@ -126,7 +140,16 @@ def _cmd_generate(parts: list[str], root: Path) -> CommandResponse:
 def _cmd_gates(parts: list[str], root: Path) -> CommandResponse:
     slug = _slug_arg(parts, root)
     p = Project.load(slug, root_base=root)
-    summary = run_all_gates(p, include_c="--include-c" in parts)
+    llm_name = _resolve_llm_provider(_opt(parts, "--llm", DEFAULT_LLM_PROVIDER))
+    model = _opt(parts, "--model", DEFAULT_LLM_MODEL)
+    reviewer = build_gate_reviewer(
+        llm_name,
+        model,
+        cache_root=_opt(parts, "--gate-cache", None),
+        fallback_on_error="--no-gate-fallback" not in parts,
+        timeout=int(_opt(parts, "--gate-timeout", str(DEFAULT_GATE_TIMEOUT))),
+    ) if llm_name != "noop" else None
+    summary = run_all_gates(p, include_c="--no-include-c" not in parts, reviewer=reviewer)
     return CommandResponse(
         f"✓ Quality gates `{slug}`\n"
         f"- Total: {summary['total']}\n- Passed: {summary['passed']}\n- Failed: {summary['failed']}\n- Skipped: {summary['skipped']}\n"
@@ -306,10 +329,10 @@ def _opts(parts: list[str], name: str) -> list[str]:
 
 HELP = """PMO Studio commands:
 - `/pmo init <slug> --customer "Tên KH" --brief "Mô tả" [--domain-pack eoffice|ky_so|hse|pms|bteco] [--source file]`
-- `/pmo generate [slug] all|po|pm|ba|ic --from-sources --refine --llm noop|9router`
+- `/pmo generate [slug] all|po|pm|ba|ic --from-sources [--no-refine] [--llm auto|noop|9router]` (default: auto + Tier2 + refine on)
 - `/pmo ba [slug]` shortcut for BA from sources + refine
 - `/pmo trace [slug]`
-- `/pmo gates [slug] [--include-c]`
+- `/pmo gates [slug] [--no-include-c] [--llm auto|noop|9router]` (default: Gate C on)
 - `/pmo status [slug]`
 - `/pmo summary [slug]`
 - `/pmo list [--refresh] [--include-archived]`

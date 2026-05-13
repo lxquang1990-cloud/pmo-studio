@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import os
+import socket
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Protocol
@@ -69,7 +71,7 @@ class NineRouterClient:
     api_key: str
     base_url: str = NINEROUTER_DEFAULT_BASE
     default_model: str = NINEROUTER_DEFAULT_MODEL
-    timeout: int = 180
+    timeout: int = 120
 
     @classmethod
     def from_env(cls) -> "NineRouterClient":
@@ -83,12 +85,13 @@ class NineRouterClient:
             )
         base = os.environ.get("9ROUTER_BASE_URL", NINEROUTER_DEFAULT_BASE)
         default_model = os.environ.get("PMO_9ROUTER_MODEL", NINEROUTER_DEFAULT_MODEL)
-        return cls(api_key=key, base_url=base, default_model=default_model)
+        timeout = int(os.environ.get("PMO_LLM_TIMEOUT", "120"))
+        return cls(api_key=key, base_url=base, default_model=default_model, timeout=timeout)
 
     def complete(self, *, system: str, user: str, model: str | None = None, temperature: float = 0.2) -> str:
-        # Accept both "Tier2" and "9Router/Tier2" — strip prefix if present
+        # Accept both "Tier2" and "9Router/Tier2"/"9router/Tier2" — strip prefix if present.
         raw_model = model or self.default_model
-        api_model = raw_model.removeprefix(NINEROUTER_MODEL_PREFIX) if raw_model.startswith(NINEROUTER_MODEL_PREFIX) else raw_model
+        api_model = raw_model.split("/", 1)[1] if raw_model.lower().startswith(NINEROUTER_MODEL_PREFIX.lower()) else raw_model
 
         body = {
             "model": api_model,
@@ -107,13 +110,18 @@ class NineRouterClient:
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            raw = resp.read().decode("utf-8")
-            # 9Router may append SSE-style "data: [DONE]" trailer — strip it
-            if "\ndata: [DONE]" in raw:
-                raw = raw[: raw.rindex("\ndata: [DONE]")]
-            data = json.loads(raw)
-        content = data["choices"][0]["message"]["content"]
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                raw = resp.read().decode("utf-8")
+        except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+            raise RuntimeError(f"9Router request failed/timeout after {self.timeout}s: {exc}") from exc
+        if not raw.strip():
+            raise RuntimeError("9Router returned empty response")
+        data = _parse_chat_response(raw)
+        try:
+            content = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError(f"9Router response missing choices[0].message.content: {str(data)[:500]}") from exc
         usage = data.get("usage", {})
         self._last_usage = usage
         return content
@@ -126,6 +134,52 @@ class NineRouterClient:
         resolved = model or self.default_model
         return LLMResponse(content=content, input_tokens=in_tok, output_tokens=out_tok, model=resolved)
 
+
+# ── Response parsing ────────────────────────────────────────────────────────
+
+def _parse_chat_response(raw: str) -> dict:
+    """Parse OpenAI-compatible JSON or SSE chunked chat completion response.
+
+    Some 9Router backends return streaming `data: {...}` chunks even when the
+    request did not explicitly ask for stream=True. For reviewer calls we need
+    the accumulated delta content as choices[0].message.content.
+    """
+    text = raw.strip()
+    if text.startswith("data:") or "\ndata:" in text:
+        content_parts: list[str] = []
+        usage: dict = {}
+        model = ""
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or not line.startswith("data:"):
+                continue
+            payload = line[5:].strip()
+            if payload == "[DONE]":
+                continue
+            try:
+                chunk = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+            model = model or chunk.get("model", "")
+            usage = chunk.get("usage") or usage
+            for choice in chunk.get("choices", []) or []:
+                delta = choice.get("delta") or {}
+                message = choice.get("message") or {}
+                piece = delta.get("content") if isinstance(delta, dict) else None
+                if piece is None and isinstance(message, dict):
+                    piece = message.get("content")
+                if piece:
+                    content_parts.append(piece)
+        content = "".join(content_parts)
+        if not content.strip():
+            preview = raw[:500].replace("\n", "\\n")
+            raise RuntimeError(f"9Router returned SSE response without content: {preview}")
+        return {"model": model, "choices": [{"message": {"content": content}}], "usage": usage}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        preview = raw[:500].replace("\n", "\\n")
+        raise RuntimeError(f"9Router returned non-JSON response: {preview}") from exc
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@ import os
 import pytest
 from pmo_studio.llm.provider import (
     NineRouterClient, NoopLLMClient, LLMResponse,
-    client_from_env, api_key_status,
+    client_from_env, api_key_status, _parse_chat_response,
 )
 
 # ── NoopLLMClient ────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ def test_ninerouter_construction():
     assert client.api_key == "sk-test"
     assert client.base_url == "http://localhost:9999/v1"
     assert client.default_model == "Tier2"
-    assert client.timeout == 180
+    assert client.timeout == 120
 
 def test_ninerouter_default_base_url():
     client = NineRouterClient(api_key="sk-test")
@@ -57,8 +57,9 @@ def test_ninerouter_default_base_url():
 
 # ── NineRouterClient.from_env ────────────────────────────────────────────────
 
-def test_from_env_no_key_raises():
-    os.environ.pop("9ROUTER_API_KEY", None)
+def test_from_env_no_key_raises(monkeypatch):
+    monkeypatch.delenv("9ROUTER_API_KEY", raising=False)
+    monkeypatch.setattr("pmo_studio.llm.provider._load_secrets_env", lambda: {})
     with pytest.raises(RuntimeError, match="9ROUTER_API_KEY"):
         NineRouterClient.from_env()
 
@@ -80,6 +81,17 @@ def test_from_env_custom_base_url():
         del os.environ["9ROUTER_API_KEY"]
         del os.environ["9ROUTER_BASE_URL"]
 
+
+def test_from_env_custom_timeout():
+    os.environ["9ROUTER_API_KEY"] = "sk-test"
+    os.environ["PMO_LLM_TIMEOUT"] = "7"
+    try:
+        client = NineRouterClient.from_env()
+        assert client.timeout == 7
+    finally:
+        del os.environ["9ROUTER_API_KEY"]
+        del os.environ["PMO_LLM_TIMEOUT"]
+
 # ── Model prefix stripping ──────────────────────────────────────────────────
 
 def test_model_prefix_stripping():
@@ -90,6 +102,27 @@ def test_model_prefix_stripping():
     assert "9Router/Tier1".removeprefix(NINEROUTER_MODEL_PREFIX) == "Tier1"
     assert "Tier2".removeprefix(NINEROUTER_MODEL_PREFIX) == "Tier2"
     assert "openai/gpt-4".removeprefix(NINEROUTER_MODEL_PREFIX) == "openai/gpt-4"
+
+# ── Response parsing ───────────────────────────────────────────────────────
+
+def test_parse_chat_response_json():
+    raw = '{"choices":[{"message":{"content":"OK"}}],"usage":{"prompt_tokens":1,"completion_tokens":1}}'
+    parsed = _parse_chat_response(raw)
+    assert parsed["choices"][0]["message"]["content"] == "OK"
+    assert parsed["usage"]["prompt_tokens"] == 1
+
+
+def test_parse_chat_response_sse_chunks():
+    raw = '\n'.join([
+        'data: {"model":"gemma4:31b-cloud","choices":[{"delta":{"content":"```json\\n{"}}]}',
+        'data: {"choices":[{"delta":{"content":"\\n  \\\"passed\\\": true"}}]}',
+        'data: {"choices":[{"delta":{"content":"\\n}\\n```"}}]}',
+        'data: [DONE]',
+    ])
+    parsed = _parse_chat_response(raw)
+    content = parsed["choices"][0]["message"]["content"]
+    assert '"passed": true' in content
+    assert content.startswith("```json")
 
 # ── client_from_env ─────────────────────────────────────────────────────────
 
@@ -116,9 +149,10 @@ def test_client_from_env_openrouter_raises():
 
 # ── api_key_status ──────────────────────────────────────────────────────────
 
-def test_api_key_status():
-    os.environ.pop("9ROUTER_API_KEY", None)
-    os.environ.pop("TG_BOT_TOKEN", None)
+def test_api_key_status(monkeypatch):
+    monkeypatch.delenv("9ROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("TG_BOT_TOKEN", raising=False)
+    monkeypatch.setattr("pmo_studio.llm.provider._load_secrets_env", lambda: {})
     status = api_key_status()
     assert "9router" in status
     assert "tg_bot_token" in status

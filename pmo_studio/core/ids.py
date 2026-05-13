@@ -9,24 +9,30 @@ ID_PATTERNS: Dict[str, str] = {
     "SRC": r"^SRC-\d{3}$",
     "BG": r"^BG-\d{3}$",
     "BR": r"^BR-[A-Z]{2,8}-\d{3}$",
-    "REQ": r"^REQ-[A-Z]{2,8}-\d{3}$",
+    "REQ": r"^(?:REQ|FR|NFR)-[A-Z]{2,8}-\d{3}$|^FR-\d{3}$",
     "SCR": r"^SCR-[A-Z]{2,8}-\d{3}$",
     "API": r"^API-[A-Z]{2,8}-\d{3}$",
     "WF": r"^WF-[A-Z]{2,8}-\d{3}$",
     "RPT": r"^RPT-[A-Z]{2,8}-\d{3}$",
     "US": r"^US-\d{3}$",
-    "AC": r"^AC-\d{3}-\d{2}$",
+    "AC": r"^AC-\d{3}(?:-\d{2})?$",
     "TC": r"^TC-\d{3}$",
-    "UAT": r"^UAT-\d{3}$",
+    "UAT": r"^UAT(?:-[A-Z]{2,8})?-\d{3}$",
     "EST": r"^EST-\d{3}$",
     "RISK": r"^RISK-\d{3}$",
     "ASM": r"^ASM-\d{3}$",
-    "DEC": r"^DEC-\d{3}$",
+    "DEC": r"^DEC(?:-[A-Z]{2,8})?-\d{3}$",
     "CR": r"^CR-\d{3}$",
+    "DP": r"^DP-\d{3}$",
+    "REL": r"^REL-\d{3}$",
+    "ENV": r"^ENV-\d{3}$",
+    "CHK": r"^CHK-\d{3}$",
+    "TST": r"^TST-\d{3}$",
+    "RBK": r"^RBK-\d{3}$",
 }
 
 AREA_TYPES = {"BR", "REQ", "SCR", "API", "WF", "RPT"}
-SIMPLE_TYPES = {"SRC", "BG", "US", "TC", "UAT", "EST", "RISK", "ASM", "DEC", "CR"}
+SIMPLE_TYPES = {"SRC", "BG", "US", "TC", "UAT", "EST", "RISK", "ASM", "DEC", "CR", "DP", "REL", "ENV", "CHK", "TST", "RBK"}
 
 
 def validate_id(value: str) -> bool:
@@ -41,7 +47,7 @@ def id_type(value: str) -> str | None:
 
 
 def extract_ids(text: str) -> list[str]:
-    candidates = re.findall(r"\b(?:SRC|BG|BR|REQ|SCR|API|WF|RPT|US|AC|TC|UAT|EST|RISK|ASM|DEC|CR)(?:-[A-Z]{2,8})?-\d{3}(?:-\d{2})?\b", text)
+    candidates = re.findall(r"\b(?:SRC|BG|BR|REQ|FR|NFR|SCR|API|WF|RPT|US|AC|TC|UAT|EST|RISK|ASM|DEC|CR|DP|REL|ENV|CHK|TST|RBK)(?:-[A-Z]{2,8})?-\d{3}(?:-\d{2})?\b", text)
     return [c for c in candidates if validate_id(c)]
 
 

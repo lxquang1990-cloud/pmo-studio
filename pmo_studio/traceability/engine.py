@@ -69,6 +69,10 @@ class TraceabilityEngine:
                 current_id = heading_id
             if _is_link_line(line):
                 self._add_oriented_edges(line_ids, edges, current_id=current_id, relation=_relation_from_line(line))
+            elif line.lstrip().startswith("|") and len(line_ids) >= 2:
+                # Markdown tables often carry trace columns without the word "linked".
+                # Example: | TC-002 | AC-001-03 | ... | should create AC-001-03 -> TC-002.
+                self._add_oriented_edges(line_ids, edges, current_id=current_id, relation="table_row_link")
             elif current_id and line_ids:
                 # Detail lines under a heading like "**Linked REQ:** REQ-..." often only contain the parent ID.
                 for other in line_ids:

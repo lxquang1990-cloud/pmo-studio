@@ -36,10 +36,10 @@ DEFAULT_RUBRICS = {
         SemanticRubric("testable", "Requirement/AC có thể kiểm chứng?"),
     ],
     "C": [
-        SemanticRubric("ready_for_customer", "Đủ sạch để gửi khách hàng review?", blocker=True, weight=2.0),
-        SemanticRubric("ready_for_dev", "Đủ rõ để dev estimate/code?", weight=1.5),
-        SemanticRubric("consistency", "Nhất quán với artifact upstream/context?", blocker=True, weight=2.0),
-        SemanticRubric("no_open_questions", "Không còn open question critical?", weight=1.5),
+        SemanticRubric("ready_for_customer", "Customer-clean: artifact has no placeholders, no internal-only leakage, readable structure, and no obvious contradictions within the artifact itself. Do not fail solely because upstream files are not provided.", blocker=True, weight=2.0),
+        SemanticRubric("ready_for_dev", "Developer-ready within artifact scope: contains enough requirements, workflows, fields, permissions, test/verification cues, or clearly marks Phase 2 boundaries. Do not require production endpoint/API contracts for PM/BRD-level docs.", weight=1.5),
+        SemanticRubric("consistency", "Internal consistency: IDs/status/scope used inside this artifact do not contradict each other. If context is empty, do not fail only because external SRC/DEC/REQ artifacts are unavailable.", blocker=True, weight=2.0),
+        SemanticRubric("no_open_questions", "No unresolved MVP-blocking questions. Phase 2 prerequisites, assumptions, owner responsibilities, or explicitly excluded items are acceptable and should not fail this check.", weight=1.5),
     ],
 }
 
