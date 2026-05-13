@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from openpyxl import Workbook
 
 from pmo_studio.core.ids import IdAllocator
 from pmo_studio.core.project import Project
@@ -110,20 +109,6 @@ Given the project exists, when I generate BA artifacts, then BRD/SRS/US/quotatio
 | {tc1} | {ac1} | Init valid project | Project layout and Stage 0 files exist |
 """, encoding="utf-8")
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Summary"
-    ws.append(["Metric", "Value"])
-    ws.append(["Manday Rate", project.config.manday_rate_vnd])
-    ws.append(["Total manday", 5.05])
-    ws.append(["Total cost VND", 5.05 * project.config.manday_rate_vnd])
-    detail = wb.create_sheet("Estimate Detail")
-    detail.append(["EST ID", "Module", "Function", "Work Item Type", "Work Item ID", "Complexity", "Rationale", "BA md", "UX md", "FE md", "BE md", "DB md", "QA md", "Total md", "Risk Factor", "Cost VND"])
-    rows = [
-        (est1, module, "Project", "Screen", scr1, "medium", 2.75),
-        (est2, module, "Project", "API", api1, "medium", 2.30),
-    ]
-    for est, mod, func, typ, wid, comp, total in rows:
-        detail.append([est, mod, func, typ, wid, comp, "Initial deterministic estimate", 0.25, 0.5 if typ == "Screen" else 0, 1.0 if typ == "Screen" else 0, 0.5 if typ == "Screen" else 1.5, 0.0 if typ == "Screen" else 0.2, 0.5, total, 1.0, total * project.config.manday_rate_vnd])
-    wb.save(ba_dir / "06-quotation.xlsx")
+    from pmo_studio.generators.quotation import generate_quotation_for_project
+    generate_quotation_for_project(project, ba_dir / "06-quotation.xlsx")
     project.mark_stage("ba", "completed", artifacts=["01-prd.md", "02-brd.md", "03-srs/srs.md", "04-us", "05-test-cases.md", "06-quotation.xlsx"])

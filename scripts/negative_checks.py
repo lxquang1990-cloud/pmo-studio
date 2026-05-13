@@ -43,13 +43,21 @@ def main() -> None:
 
         quote = p.root / "artifacts" / "ba" / "06-quotation.xlsx"
         wb = load_workbook(quote)
-        ws = wb["Summary"]
-        for row in ws.iter_rows(min_row=2):
-            if row[0].value == "Total cost VND":
-                row[1].value = 1
+        if "Summary" in wb.sheetnames:
+            ws = wb["Summary"]
+            for row in ws.iter_rows(min_row=2):
+                if row[0].value == "Total cost VND":
+                    row[1].value = 1
+        else:
+            ws = wb["Feature List"]
+            # Remove all screen mandays; BaoGia_Template_v4 Gate A must reject an
+            # estimate with no actual screen rows.
+            for row in ws.iter_rows(min_row=2):
+                if isinstance(row[0].value, str) and row[0].value.count(".") == 2:
+                    row[3].value = None
         wb.save(quote)
         r = run_gate_a(quote, "ba.quotation")
-        assert not r.passed, "Quotation total mismatch should fail Gate A"
+        assert not r.passed, "Invalid quotation workbook should fail Gate A"
 
         cfg = p.root / "artifacts" / "ic" / "02-config-workbook.xlsx"
         wb = load_workbook(cfg)

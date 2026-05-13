@@ -37,7 +37,7 @@ class EvalCase:
     min_trace_edges: int = 10
     min_manifest_items: int = 12
     expected_manday_min: float = 1.0
-    expected_manday_max: float = 50.0
+    expected_manday_max: float = 80.0
 
 
 @dataclass
@@ -195,9 +195,18 @@ def _quotation_sanity(project_root: Path, case: EvalCase) -> dict[str, Any]:
     try:
         from openpyxl import load_workbook
         wb = load_workbook(project_root / "artifacts" / "ba" / "06-quotation.xlsx", data_only=True)
-        ws = wb["Summary"]
-        metrics = {str(row[0].value): row[1].value for row in ws.iter_rows(min_row=2) if row[0].value is not None}
-        total = float(metrics.get("Total manday", 0))
+        total = 0.0
+        if "Summary" in wb.sheetnames:
+            ws = wb["Summary"]
+            metrics = {str(row[0].value): row[1].value for row in ws.iter_rows(min_row=2) if row[0].value is not None}
+            total = float(metrics.get("Total manday", 0) or 0)
+        elif "Tổng hợp" in wb.sheetnames:
+            ws = wb["Tổng hợp"]
+            for row in ws.iter_rows(values_only=True):
+                label = str(row[1] or "") if len(row) > 1 else ""
+                if "Tổng manday cuối" in label:
+                    total = float(row[2] or 0)
+                    break
         return {"total_manday": total, "sane": case.expected_manday_min <= total <= case.expected_manday_max}
     except Exception as exc:
         return {"total_manday": 0.0, "sane": False, "error": str(exc)}

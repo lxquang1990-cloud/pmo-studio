@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from openpyxl import Workbook
 
 from pmo_studio.core.ids import IdAllocator
 from pmo_studio.core.project import Project
@@ -201,40 +200,11 @@ Given source data is missing workflow or integration details, when artifacts are
 
 {table(test_rows)}
 """, domain), encoding="utf-8")
-    _write_quotation(ba_dir / "06-quotation.xlsx", project, [(est_scr, "Screen", scr, 2.75 * intel.complexity_multiplier), (est_api, "API", api, 2.30 * intel.complexity_multiplier)], multiplier=intel.complexity_multiplier, risks=intel.risks)
+    from pmo_studio.generators.quotation import generate_quotation_for_project
+    generate_quotation_for_project(project, ba_dir / "06-quotation.xlsx")
     project.mark_stage("ba.source_driven", "completed")
-
 
 def _source_summary(text: str) -> str:
     lines = [line.strip() for line in text.splitlines() if line.strip() and not line.strip().startswith("--- SOURCE")]
     return "\n".join(f"- {line[:180]}" for line in lines[:8])
 
-
-def _write_quotation(path: Path, project: Project, rows: list[tuple[str, str, str, float]], multiplier: float = 1.0, risks: list[str] | None = None) -> None:
-    wb = Workbook(); ws = wb.active; ws.title = "Summary"
-    detail = wb.create_sheet("Estimate Detail")
-    detail.append(["EST ID", "Module", "Function", "Work Item Type", "Work Item ID", "Complexity", "Rationale", "BA md", "UX md", "FE md", "BE md", "DB md", "QA md", "Total md", "Risk Factor", "Cost VND"])
-    detail_total = 0.0
-    detail_cost = 0.0
-    detail_rows = []
-    for est, typ, wid, md in rows:
-        md_rounded = round(md, 2)
-        cost = round(md_rounded * project.config.manday_rate_vnd, 0)
-        detail_total += md_rounded
-        detail_cost += cost
-        detail_rows.append([est, "Core", "Source/domain-aware generation", typ, wid, "medium" if multiplier < 1.3 else "high", "Includes source intelligence, domain terminology, negative cases and export profile needs", round(0.35 * multiplier, 2), round((0.5 if typ == "Screen" else 0) * multiplier, 2), round((1.0 if typ == "Screen" else 0) * multiplier, 2), round((0.5 if typ == "Screen" else 1.5) * multiplier, 2), round((0.2 if typ == "API" else 0) * multiplier, 2), round(0.6 * multiplier, 2), md_rounded, multiplier, cost])
-    total = round(detail_total, 2)
-    ws.append(["Metric", "Value"])
-    ws.append(["Manday Rate", project.config.manday_rate_vnd])
-    ws.append(["Complexity multiplier", multiplier])
-    ws.append(["Total manday", total])
-    ws.append(["Total cost VND", detail_cost])
-    for row in detail_rows:
-        detail.append(row)
-    risk_ws = wb.create_sheet("Risks & Assumptions")
-    risk_ws.append(["Type", "Description", "Impact"])
-    for risk in risks or []:
-        risk_ws.append(["Risk", risk, "May increase analysis/dev/test effort if not clarified early"])
-    if not risks:
-        risk_ws.append(["Assumption", "Source sample is representative", "Estimate may change after workshop"])
-    wb.save(path)

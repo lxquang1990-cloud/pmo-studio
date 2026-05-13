@@ -40,8 +40,8 @@ DEFAULT_MARKDOWN_SECTIONS = {
 
 EXCEL_REQUIRED = {
     "ba.quotation": {
-        "Summary": ["Metric", "Value"],
-        "Estimate Detail": ["EST ID", "Module", "Work Item Type", "Work Item ID", "Total md", "Cost VND"],
+        "Feature List": ["STT", "Chức năng / Màn hình", "Đơn giá (Man/day)", "Manday", "Thành tiền (VNĐ)"],
+        "Giả định":    ["STT", "Loại", "Nội dung giả định"],
     },
     "ic.fit_gap": {
         "Summary": ["Metric", "Value"],
@@ -56,7 +56,7 @@ EXCEL_REQUIRED = {
 EXCEL_ENUMS = {
     "ic.fit_gap": {"Fit-Gap Detail": {"Fit/Gap": {"Fit", "Gap"}, "Gap Type": {"Fit", "Customization", "Workaround", "Out of Scope", ""}}},
     "ic.config_workbook": {"Org Settings": {"Required": {"yes", "no", "yes (if SSO_AD)", ""}, "Status": {"Draft", "Pending", "Confirmed", ""}}},
-    "ba.quotation": {"Estimate Detail": {"Work Item Type": {"Screen", "API", "Workflow", "Report", "Integration", "Migration", "Configuration"}}},
+    "ba.quotation": {"Giả định": {"Loại": {"Phạm vi", "Kỹ thuật", "Dữ liệu"}}},
 }
 
 
@@ -115,8 +115,8 @@ def check_excel(path: Path, stage: str) -> GateResult:
         checks.append(CheckResult(f"enum.{sheet}", not enum_errors, "Enum values valid" if not enum_errors else f"Invalid enum: {enum_errors[:10]}"))
         id_errors = _id_errors(rows)
         checks.append(CheckResult(f"ids.{sheet}", not id_errors, "Referenced IDs valid" if not id_errors else f"Invalid IDs: {id_errors[:10]}", True))
-        if stage == "ba.quotation" and sheet == "Estimate Detail":
-            checks.extend(_quotation_checks(wb, rows))
+        if stage == "ba.quotation" and sheet == "Feature List":
+            checks.extend(_quotation_checks_v4(wb, rows))
         if stage == "ic.config_workbook" and sheet == "Org Settings":
             plain = _plain_secret_errors(rows)
             checks.append(CheckResult("secret.org_settings", not plain, "No plaintext secrets" if not plain else f"Plain secret-like values: {plain[:10]}", True))
@@ -189,6 +189,42 @@ def _quotation_checks(wb, rows: list[dict[str, Any]]) -> list[CheckResult]:
         checks.append(CheckResult("quotation.total_manday", abs(float(summary["Total manday"]) - detail_total_md) < 0.01, f"Summary={summary['Total manday']} Detail={detail_total_md}", True))
     if "Total cost VND" in summary:
         checks.append(CheckResult("quotation.total_cost", abs(float(summary["Total cost VND"]) - detail_total_cost) < 1, f"Summary={summary['Total cost VND']} Detail={detail_total_cost}", True))
+    return checks
+
+
+def _quotation_checks_v4(wb, rows: list[dict[str, Any]]) -> list[CheckResult]:
+    """Gate checks cho BaoGia_Template_v4 (Feature List sheet)."""
+    checks = []
+    manday_col = "Manday"
+    thanhtien_col = "Thành tiền (VNĐ)"
+    numeric_errors = []
+    has_screens = False
+    for idx, row in enumerate(rows, start=2):
+        md_val = row.get(manday_col)
+        tt_val = row.get(thanhtien_col)
+        if md_val is not None and str(md_val).startswith("="):
+            continue  # formula — skip validation (không data_only)
+        try:
+            if md_val is not None and str(md_val).strip() not in ("", "Manday"):
+                float(md_val)
+                has_screens = True
+            if tt_val is not None and str(tt_val).strip() not in ("", "Thành tiền (VNĐ)"):
+                float(str(tt_val).replace(",", ""))
+        except Exception:
+            numeric_errors.append(f"row {idx}")
+    checks.append(CheckResult("quotation.v4.numeric", not numeric_errors,
+                              "Numeric cells valid" if not numeric_errors else f"Non-numeric: {numeric_errors[:10]}",
+                              blocker=False))
+    checks.append(CheckResult("quotation.v4.has_screens", has_screens,
+                              "Feature List has screen data", blocker=True))
+    has_tonghop = "Tổng hợp" in wb.sheetnames
+    has_giadinh = "Giả định" in wb.sheetnames
+    checks.append(CheckResult("quotation.v4.sheet_tonghop", has_tonghop,
+                              "Sheet Tổng hợp exists" if has_tonghop else "Sheet Tổng hợp missing",
+                              blocker=True))
+    checks.append(CheckResult("quotation.v4.sheet_giadinh", has_giadinh,
+                              "Sheet Giả định exists" if has_giadinh else "Sheet Giả định missing",
+                              blocker=True))
     return checks
 
 
