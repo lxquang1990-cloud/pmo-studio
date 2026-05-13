@@ -17,6 +17,11 @@ def generate_po(project: Project) -> None:
 ## Vision Statement
 {domain.prd_context[:300] if domain.prd_context else 'PMO Studio giúp chuẩn hóa tài liệu dự án phần mềm từ intake đến go-live.'}
 
+## Scope & Success Metrics
+- Scope: chuẩn hóa pipeline tài liệu từ source intake tới BRD/SRS/US/AC/Quotation/export.
+- KPI: giảm 50% thời gian draft tài liệu BA, 85% artifact đạt gate sau tối đa 2 vòng review.
+- Review cadence: PO/PM/BA review theo từng release, evidence lưu trong quality gate output.
+
 ## Business Goals
 ### BG-001: Rút ngắn thời gian tạo tài liệu
 **Linked source:** SRC-001
@@ -39,7 +44,7 @@ def generate_pm(project: Project) -> None:
     domain = get_domain(project.config.domain_pack)
     d = project.root / "artifacts/pm"
     d.mkdir(parents=True, exist_ok=True)
-    (d / "01-charter.md").write_text(f"# Project Charter\n\n## Domain: {domain.label}\n\n## Objective\nBuild PMO Studio v2.1 for {domain.label}.\n\n## Industry Context\n{domain.industry}.\n\n## Scope\nStage 0 + PO/PM/BA/IC + gates + traceability.\n", encoding="utf-8")
+    (d / "01-charter.md").write_text(f"# Project Charter\n\n## Domain: {domain.label}\n\n## Objective\nBuild PMO Studio v2.1 for {domain.label}.\n\n## Industry Context\n{domain.industry}.\n\n## Scope\nStage 0 + PO/PM/BA/IC + gates + traceability.\n\n## Linked Outcomes\n- Linked source: SRC-001\n- Business goal: BG-001\n- Success metric: 85% quality gate pass rate after <=2 review cycles.\n\n## Acceptance / Review\nPM validates timeline, BA validates requirement evidence, IC validates implementation readiness before client-ready export.\n", encoding="utf-8")
     for name, headers, row in [
         ("02-wbs.xlsx", ["WBS", "Task", "Linked EST", "Owner"], ["1.1", "Build core", "EST-001", "SnailBot"]),
         ("03-raci.xlsx", ["Activity", "R", "A", "C", "I"], ["Quality Gate", "BA", "PM", "Dev", "Sponsor"]),

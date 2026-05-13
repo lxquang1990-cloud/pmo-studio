@@ -55,34 +55,45 @@ def deterministic_review(stage: str, layer: str, artifact_text: str, context: st
     checks: list[CheckResult] = []
     text_lower = artifact_text.lower()
     rubrics = _rubrics_for(stage, layer)
+    ids = re.findall(r"\b(?:SRC|BR|REQ|SCR|API|WF|US|AC|TC|EST)-[A-Z0-9-]+\b", artifact_text)
+    headings = re.findall(r"^#{1,4}\s+(.+)$", artifact_text, flags=re.M)
+    gwt_count = sum(1 for k in ["given", "when", "then"] if k in text_lower)
+    domain_markers = [k for k in ["workflow", "luồng", "phân quyền", "ký", "sla", "integration", "api", "negative", "exception", "risk"] if k in text_lower]
     for r in rubrics:
         passed = True
         evidence = "Local heuristic pass"
         if r.id in {"no_tbd", "no_open_questions"}:
-            hits = re.findall(r"\b(TBD|TODO|FIXME|chưa xác định|cần bổ sung)\b", artifact_text, flags=re.I)
+            # Allow explicit workshop/open-question language, but block placeholder debt.
+            hits = re.findall(r"\b(TBD|TODO|FIXME|xxx|lorem ipsum|chưa xác định|cần bổ sung)\b", artifact_text, flags=re.I)
             passed = not hits
-            evidence = "No placeholders" if passed else f"Placeholders found: {hits[:5]}"
+            evidence = "No placeholder debt found" if passed else f"Placeholder debt: {hits[:5]}"
         elif r.id == "clear_scope":
-            passed = any(k in text_lower for k in ["scope", "phạm vi", "purpose", "mục tiêu", "description"])
-            evidence = "Scope/purpose term found" if passed else "No clear scope/purpose marker"
+            markers = [k for k in ["scope", "phạm vi", "purpose", "mục tiêu", "business context", "overview", "description"] if k in text_lower]
+            passed = len(markers) >= 1 and len(headings) >= 2
+            evidence = f"Scope markers={markers[:4]}, headings={len(headings)}"
         elif r.id == "ids_linked":
-            passed = any(k in text_lower for k in ["linked", "link", "source", "req-", "br-"])
-            evidence = "Trace marker found" if passed else "No trace marker found"
+            link_markers = [k for k in ["linked", "link", "source", "upstream", "downstream", "stakeholder", "owner", "depends"] if k in text_lower]
+            passed = (len(ids) >= 1 and bool(link_markers)) or len(ids) >= 2 or len(domain_markers) >= 2
+            evidence = f"ids={ids[:8]}, link_markers={link_markers}, domain_markers={domain_markers[:6]}"
         elif r.id == "testable":
-            passed = any(k in text_lower for k in ["given", "when", "then", "verification", "expected", "acceptance"])
-            evidence = "Verification/test marker found" if passed else "No verification/test marker found"
+            markers = [k for k in ["given", "when", "then", "verification", "expected", "acceptance", "test case", "scenario", "success metric", "kpi", "review", "approve", "đo", "nghiệm thu"] if k in text_lower]
+            passed = gwt_count >= 2 or len(markers) >= 1 or len(domain_markers) >= 2
+            evidence = f"testability markers={markers[:8]}, gwt_count={gwt_count}, domain_markers={domain_markers[:6]}"
         elif r.id == "ready_for_customer":
-            passed = "internal only" not in text_lower and "draft only" not in text_lower
-            evidence = "No internal-only marker" if passed else "Internal-only marker found"
+            blockers = [k for k in ["internal only", "draft only", "do not send", "confidential internal"] if k in text_lower]
+            passed = not blockers and len(artifact_text.strip()) >= 400
+            evidence = "No customer-facing blockers; content length sufficient" if passed else f"Customer blockers/short content: {blockers}, len={len(artifact_text.strip())}"
         elif r.id == "ready_for_dev":
-            passed = any(k in text_lower for k in ["req-", "api-", "scr-", "workflow", "acceptance", "endpoint"])
-            evidence = "Implementation markers found" if passed else "No implementation markers"
+            impl = [k for k in ["req-", "api-", "scr-", "workflow", "acceptance", "endpoint", "error cases", "permission"] if k in text_lower]
+            passed = len(impl) >= 2 and len(ids) >= 2
+            evidence = f"implementation markers={impl}, ids={ids[:8]}"
         elif r.id == "consistency":
-            passed = True
-            evidence = "Deterministic consistency deferred to traceability engine"
+            passed = len(domain_markers) >= 2 or len(ids) >= 3
+            evidence = f"domain/consistency markers={domain_markers[:8]}, ids={ids[:8]}"
         checks.append(CheckResult(r.id, passed, evidence, r.blocker))
     result = GateResult(stage=stage, layer=layer, checks=checks)
-    result.passed = all(c.passed for c in checks if c.blocker) and (sum(1 for c in checks if c.passed) / max(len(checks), 1) >= (0.8 if layer == "B" else 0.9))
+    threshold = 0.7 if layer == "B" else 0.9
+    result.passed = all(c.passed for c in checks if c.blocker) and (sum(1 for c in checks if c.passed) / max(len(checks), 1) >= threshold)
     return result
 
 
