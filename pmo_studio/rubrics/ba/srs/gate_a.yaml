@@ -1,0 +1,10 @@
+stage: ba.srs
+layer: A
+sections:
+  - "# SRS"
+  - "## 1. Introduction"
+  - "## 2. Overall Description"
+  - "## 3. Specific Requirements"
+ids:
+  validate: true
+  no_duplicates: true

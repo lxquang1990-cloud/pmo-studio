@@ -1,0 +1,9 @@
+stage: ba.brd
+layer: A
+sections:
+- '# BRD'
+- '## 1. Business Context'
+- '## 2. Business Requirements'
+ids:
+  validate: true
+  no_duplicates: true

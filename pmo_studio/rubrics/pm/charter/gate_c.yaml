@@ -1,0 +1,14 @@
+stage: pm.charter
+layer: C
+pass_threshold: 0.9
+checks:
+- id: ready_for_customer
+  question: Đủ sạch để gửi khách hàng review?
+  blocker: true
+- id: ready_for_dev
+  question: Đủ rõ để dev estimate/code?
+- id: consistency
+  question: Nhất quán với artifact upstream/context?
+  blocker: true
+- id: no_open_questions
+  question: Không còn open question critical?

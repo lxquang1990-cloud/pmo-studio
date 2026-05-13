@@ -1,0 +1,9 @@
+stage: pm.charter
+layer: A
+sections:
+- '# Project Charter'
+- '## Objective'
+- '## Scope'
+ids:
+  validate: true
+  no_duplicates: true

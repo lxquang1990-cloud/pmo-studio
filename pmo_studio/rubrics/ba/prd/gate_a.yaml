@@ -1,0 +1,9 @@
+stage: ba.prd
+layer: A
+sections:
+- '# PRD'
+- '## Overview'
+- '## Business Goals'
+ids:
+  validate: true
+  no_duplicates: true

@@ -1,0 +1,6 @@
+stage: ba.quotation
+layer: A
+kind: excel
+sheets:
+- Summary
+- Estimate Detail

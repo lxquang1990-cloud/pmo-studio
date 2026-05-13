@@ -1,0 +1,13 @@
+stage: ba.srs
+layer: B
+pass_threshold: 0.8
+checks:
+  - id: no_tbd
+    question: "Không còn placeholder/TBD critical?"
+    blocker: true
+  - id: clear_scope
+    question: "Scope hoặc purpose có mô tả rõ ràng?"
+  - id: ids_linked
+    question: "Các ID chính có link upstream/downstream?"
+  - id: testable
+    question: "Requirement/AC có thể kiểm chứng?"

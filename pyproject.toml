@@ -1,0 +1,51 @@
+[project]
+name = "pmo-studio"
+version = "1.0.0rc2"
+description = "PMO Studio v2.1 Documentation Operating System"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "LicenseRef-Proprietary"
+authors = [
+  {name = "SnailBot / OpenClaw"},
+]
+keywords = ["pmo", "business-analysis", "documentation", "traceability", "quality-gates"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+  "Topic :: Software Development :: Documentation",
+]
+dependencies = [
+  "openpyxl>=3.1.0",
+  "python-docx>=1.1.0",
+  "pyyaml>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=6.0"]
+
+[project.scripts]
+pmo = "pmo_studio.cli:main"
+pmo-studio = "pmo_studio.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pmo_studio*"]
+exclude = ["skills*", "docs*", "scripts*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short --strict-markers"
+
+[tool.coverage.run]
+source = ["pmo_studio"]
+omit = ["tests/*", "skills/*"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "@abstractmethod", "raise NotImplementedError"]
+fail_under = 0

@@ -1,0 +1,26 @@
+{
+  "project": "pmo-studio",
+  "version": "1.0.0rc2",
+  "tag_suggestion": "v1.0.0rc2",
+  "artifacts": [
+    {
+      "name": "SHA256SUMS",
+      "size": 206
+    },
+    {
+      "name": "pmo_studio-1.0.0rc2-py3-none-any.whl",
+      "size": 75112
+    },
+    {
+      "name": "pmo_studio-1.0.0rc2.tar.gz",
+      "size": 65493
+    }
+  ],
+  "verification": {
+    "install_check": "PASS /tmp/pmo-phase25-install-rc2",
+    "verify_all": "PASS /tmp/pmo-phase25-verify-rc2",
+    "benchmark_score": "94.12%",
+    "pytest": "83 passed"
+  },
+  "release_policy": "Manual git commit/tag/push only; assistant did not tag or push."
+}

@@ -1,0 +1,8 @@
+stage: ba.us_ac
+layer: A
+sections:
+- '# User Story'
+- '## Acceptance Criteria'
+ids:
+  validate: true
+  no_duplicates: true

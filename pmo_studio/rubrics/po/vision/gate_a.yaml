@@ -1,0 +1,9 @@
+stage: po.vision
+layer: A
+sections:
+- '# Product Vision'
+- '## Vision Statement'
+- '## Business Goals'
+ids:
+  validate: true
+  no_duplicates: true

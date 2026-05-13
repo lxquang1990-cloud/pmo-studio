@@ -1,0 +1,6 @@
+stage: ic.config_workbook
+layer: A
+kind: excel
+sheets:
+- Summary
+- Org Settings

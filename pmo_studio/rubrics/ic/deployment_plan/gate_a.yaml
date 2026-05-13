@@ -1,0 +1,7 @@
+stage: ic.deployment_plan
+layer: A
+sections:
+- '# Deployment Plan'
+ids:
+  validate: true
+  no_duplicates: true

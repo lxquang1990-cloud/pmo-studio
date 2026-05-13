@@ -1,0 +1,46 @@
+name: PMO Studio Verify
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Install dev deps
+        run: python -m pip install pytest pytest-cov
+
+      - name: Unit tests
+        run: python -m pytest tests/ -v --tb=short --cov=pmo_studio --cov-report=term
+
+      - name: Compile
+        run: python -m compileall -q pmo_studio
+
+      - name: Smoke
+        run: scripts/smoke_phase11.sh /tmp/pmo-ci-smoke
+
+      - name: Benchmark
+        run: scripts/benchmark.sh /tmp/pmo-ci-benchmark
+
+      - name: Negative guardrails
+        run: scripts/negative_checks.py
