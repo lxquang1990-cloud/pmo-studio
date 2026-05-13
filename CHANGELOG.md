@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.0 - 2026-05-14
+
+### Added
+- Stage21 Asset Management demo baseline with 26/26 quality gates and Traceability PASS.
+- `pmo demo asset-management` one-command offline demo.
+- `examples/asset-management-source.md` bundled source brief.
+- `scripts/demo_asset_management.sh` reproducible end-to-end demo script.
+
+### Changed
+- README quick start now documents the Stage21 green path and customer export output.
+- Local runtime artifacts (`.pmo-studio-registry.json`, `backups/`, `runs/`) are ignored by git.
+
+### Verification
+- `python -m compileall -q pmo_studio` PASS.
+- `python -m pytest -q tests/test_provider.py tests/test_core.py` PASS (21 tests).
+- `python -m pmo_studio.cli doctor` PASS.
+- `python -m pmo_studio.cli eval` PASS, score 1.0.
+- Stage21 full run: 36 artifacts, Quality 26/26, Traceability PASS (88 nodes / 255 edges), lifecycle EXPORTED.
+
 ## 1.0.0rc2 - 2026-05-12
 
 ### Added

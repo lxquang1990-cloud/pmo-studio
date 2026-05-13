@@ -8,7 +8,7 @@ PMO Studio is an offline-first Documentation Operating System for software proje
 ## Current milestone
 
 ```text
-PMO Studio v1.0.0rc2 — bundled, registry-aware, Telegram-ready, LLM-gate ready
+PMO Studio v1.0.0 — Stage21 green: 26/26 gates, Traceability PASS, customer export ready
 ```
 
 ## Core principles
@@ -39,33 +39,56 @@ See [INSTALL.md](INSTALL.md) for detailed setup and troubleshooting.
 
 ## Quick start
 
+### One-command demo
+
 ```bash
 # From the cloned repository root: ./pmo-studio
-python -m pmo_studio.cli --root /tmp/pmo-demo scaffold
-
-cat > /tmp/pmo-source.md <<'EOF'
-Khách hàng cần eOffice quản lý văn bản, duyệt đa cấp, phân quyền phòng ban,
-dashboard SLA, báo cáo quá hạn. token=secret
-EOF
-
-python -m pmo_studio.cli --root /tmp/pmo-demo init demo-project \
-  --customer 'Demo Customer' \
-  --source /tmp/pmo-source.md
-
-python -m pmo_studio.cli --root /tmp/pmo-demo generate demo-project all \
-  --from-sources \
-  --llm noop \
-  --refine \
-  --max-refine 2
-
-python -m pmo_studio.cli --root /tmp/pmo-demo trace demo-project --validate
-python -m pmo_studio.cli --root /tmp/pmo-demo run-gates demo-project
-python -m pmo_studio.cli --root /tmp/pmo-demo export demo-project --format zip
+python -m pmo_studio.cli --root /tmp/pmo-demo demo asset-management --force
 ```
 
-Generated files will be under `/tmp/pmo-demo/demo-project/`.
+Expected result:
+
+```text
+Quality: 26/26 passed, failed=0
+Traceability: PASS
+Lifecycle: EXPORTED
+Latest export: /tmp/pmo-demo/asset-management-demo/exports/customer/asset-management-demo-pmo-bundle.zip
+```
+
+The demo uses the bundled source brief at [`examples/asset-management-source.md`](examples/asset-management-source.md) and runs fully offline with `--llm noop`.
+
+### Manual flow
+
+```bash
+python -m pmo_studio.cli --root /tmp/pmo-demo init asset-management-demo \
+  --customer 'Demo Asset Customer' \
+  --product 'Asset Management Demo' \
+  --brief 'Generate a client-ready PMO documentation pack for an Asset Management MVP.' \
+  --domain-pack bteco \
+  --source examples/asset-management-source.md
+
+python -m pmo_studio.cli --root /tmp/pmo-demo generate asset-management-demo all \
+  --from-sources \
+  --llm noop \
+  --no-refine
+
+python -m pmo_studio.cli --root /tmp/pmo-demo trace asset-management-demo --validate
+python -m pmo_studio.cli --root /tmp/pmo-demo run-gates asset-management-demo --include-c --llm noop
+python -m pmo_studio.cli --root /tmp/pmo-demo export asset-management-demo --format all --profile customer
+python -m pmo_studio.cli --root /tmp/pmo-demo summary asset-management-demo
+```
+
+Generated files will be under `/tmp/pmo-demo/asset-management-demo/`.
 
 ## CLI reference
+
+
+### Demo
+
+```bash
+python -m pmo_studio.cli demo asset-management --force
+scripts/demo_asset_management.sh /tmp/pmo-asset-demo
+```
 
 ### Project registry
 
