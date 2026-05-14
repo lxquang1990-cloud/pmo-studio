@@ -10,3 +10,27 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - asset allocation handover return transfer
+  - inventory campaign reconciliation
+  - maintenance ticket lifecycle
+  - liquidation approval
+reports:
+  - asset by department
+  - asset status aging
+  - inventory discrepancy
+  - maintenance cost
+integrations:
+  - HRM employee data
+  - ERP/accounting
+  - Barcode/RFID optional
+risk_factors:
+  - initial asset data migration
+  - serial/asset code uniqueness
+  - inventory evidence quality
+acceptance_presets:
+  - asset_code is system generated
+  - Unauthorized transfer is blocked and audited
+  - Inventory discrepancy requires reconciliation note

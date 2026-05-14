@@ -10,3 +10,27 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - incoming document routing
+  - outgoing document drafting approval release
+  - multi-level e-sign review
+  - document archive and retrieval
+reports:
+  - overdue documents
+  - SLA by department
+  - document volume by type/status
+integrations:
+  - LDAP/AD
+  - Email notification
+  - DMS API
+  - Digital signature provider
+risk_factors:
+  - legacy document migration
+  - delegation/authorization matrix
+  - external signing provider SLA
+acceptance_presets:
+  - Unauthorized users cannot view restricted documents
+  - Overdue workflow tasks are visible in dashboard
+  - Released documents are immutable except authorized revision flow

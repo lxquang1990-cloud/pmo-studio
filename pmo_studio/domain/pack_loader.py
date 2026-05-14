@@ -18,6 +18,12 @@ class ConfigDomainPack:
     modules: list[str] = field(default_factory=list)
     roles: dict[str, str] = field(default_factory=dict)
     quotation_defaults: dict[str, Any] = field(default_factory=dict)
+    pack_version: int = 1
+    workflows: list[str] = field(default_factory=list)
+    reports: list[str] = field(default_factory=list)
+    integrations: list[str] = field(default_factory=list)
+    risk_factors: list[str] = field(default_factory=list)
+    acceptance_presets: list[str] = field(default_factory=list)
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -37,6 +43,12 @@ def load_domain_pack(domain_id: str) -> ConfigDomainPack:
         modules=list(data.get("modules") or []),
         roles=dict(data.get("roles") or {}),
         quotation_defaults=dict(data.get("quotation_defaults") or {}),
+        pack_version=int(data.get("pack_version") or 1),
+        workflows=list(data.get("workflows") or []),
+        reports=list(data.get("reports") or []),
+        integrations=list(data.get("integrations") or []),
+        risk_factors=list(data.get("risk_factors") or []),
+        acceptance_presets=list(data.get("acceptance_presets") or []),
         raw=data,
     )
 

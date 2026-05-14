@@ -12,3 +12,26 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - request intake
+  - review approval
+  - execution tracking
+  - report/export
+reports:
+  - operational dashboard
+  - SLA/aging
+  - status summary
+integrations:
+  - SSO
+  - Email notification
+  - API integration
+risk_factors:
+  - unclear source scope
+  - data migration
+  - approval rule discovery
+acceptance_presets:
+  - Role-based access is enforced
+  - Reports can filter/export core data
+  - All critical changes are audited

@@ -10,3 +10,27 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - incident reporting and investigation
+  - corrective action assignment
+  - inspection checklist
+  - training compliance follow-up
+reports:
+  - TRIR/LTIFR dashboard
+  - open action aging
+  - inspection compliance
+  - training matrix
+integrations:
+  - Email/SMS notification
+  - Plant master data
+  - BI dashboard
+risk_factors:
+  - regulatory reporting accuracy
+  - offline plant data capture
+  - corrective action ownership
+acceptance_presets:
+  - Incident cannot close with open critical actions
+  - Inspection checklist records evidence
+  - Compliance report filters by site and period

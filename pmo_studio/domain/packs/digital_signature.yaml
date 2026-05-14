@@ -10,3 +10,27 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - signing request creation
+  - approval before signing
+  - batch PDF signing
+  - certificate audit review
+reports:
+  - signing volume by status
+  - certificate expiry
+  - failed callback log
+integrations:
+  - CA provider
+  - Timestamp authority
+  - Document system
+  - Webhook callback API
+risk_factors:
+  - provider SLA
+  - certificate lifecycle
+  - legal audit trail
+acceptance_presets:
+  - Signed document stores immutable audit trail
+  - Expired certificate blocks signing
+  - Callback retry handles provider timeout

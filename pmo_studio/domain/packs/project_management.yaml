@@ -10,3 +10,28 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - project initiation approval
+  - task assignment
+  - issue escalation
+  - milestone acceptance
+reports:
+  - portfolio dashboard
+  - project burndown
+  - risk/issue log
+  - resource allocation
+integrations:
+  - Microsoft Project
+  - Planner
+  - Teams
+  - GitHub/GitLab
+risk_factors:
+  - cross-tool synchronization
+  - resource calendar accuracy
+  - portfolio reporting consistency
+acceptance_presets:
+  - Milestone status rolls up to portfolio
+  - Overdue issues trigger escalation
+  - Only authorized PM can baseline plan

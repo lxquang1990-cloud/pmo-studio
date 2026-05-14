@@ -10,3 +10,28 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - employee onboarding
+  - leave request approval
+  - timesheet approval
+  - performance review cycle
+reports:
+  - headcount by department
+  - leave balance
+  - attendance exception
+  - training compliance
+integrations:
+  - Payroll
+  - SSO
+  - Attendance device
+  - Email notification
+risk_factors:
+  - personal data privacy
+  - payroll rule complexity
+  - device data reliability
+acceptance_presets:
+  - Employee can submit leave only within balance
+  - Manager approvals are audited
+  - Sensitive HR data requires role-based access

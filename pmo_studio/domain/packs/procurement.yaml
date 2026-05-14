@@ -10,3 +10,27 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - purchase request approval
+  - vendor quotation comparison
+  - purchase order approval
+  - goods receipt and invoice matching
+reports:
+  - procurement cycle time
+  - vendor performance
+  - PO budget consumption
+integrations:
+  - ERP
+  - Accounting
+  - Vendor portal
+  - Inventory system
+risk_factors:
+  - approval policy variance
+  - master data quality
+  - ERP API availability
+acceptance_presets:
+  - PR approval follows amount threshold
+  - PO cannot exceed approved budget without exception
+  - Goods receipt validates ordered quantity

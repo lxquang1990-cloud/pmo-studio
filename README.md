@@ -220,6 +220,26 @@ LegalIQ
 CRM
 ```
 
+## v1.3 domain pack v2 enrichment
+
+Domain packs now support business knowledge sections beyond keywords/modules/roles:
+
+```yaml
+pack_version: 2
+workflows:
+  - approval workflow
+reports:
+  - operational dashboard
+integrations:
+  - SSO
+risk_factors:
+  - data migration
+acceptance_presets:
+  - Role-based access is enforced
+```
+
+The render context uses these sections to produce more domain-specific BRD/SRS/AC content while staying offline-first.
+
 ## CLI reference
 
 

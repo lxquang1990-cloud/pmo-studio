@@ -10,3 +10,28 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - course publishing
+  - learner enrollment
+  - quiz/exam completion
+  - certificate issuance
+reports:
+  - learning progress
+  - quiz score distribution
+  - certificate expiry
+  - training compliance
+integrations:
+  - SSO
+  - HRM employee data
+  - Email notification
+  - Video/content storage
+risk_factors:
+  - content migration
+  - quiz rule complexity
+  - large file delivery
+acceptance_presets:
+  - Learner progress is saved per lesson
+  - Certificate requires passing score
+  - Manager can view team compliance only

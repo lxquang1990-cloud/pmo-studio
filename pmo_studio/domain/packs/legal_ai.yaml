@@ -10,3 +10,28 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - legal Q&A triage
+  - AI answer with citation review
+  - authorization issuance
+  - contract review/thẩm định
+reports:
+  - Q&A volume by topic
+  - authorization status
+  - contract review SLA
+  - legal risk dashboard
+integrations:
+  - eOffice signing
+  - PMS
+  - Document repository
+  - AI/LLM provider
+risk_factors:
+  - legal citation accuracy
+  - AI hallucination guardrail
+  - approval authority matrix
+acceptance_presets:
+  - AI answer must include citation or escalate
+  - Final legal answer is versioned
+  - Unauthorized user cannot access restricted legal matter

@@ -27,11 +27,19 @@ def build_render_context(source_text: str, *, project_slug: str = "", customer: 
     br = [["BR ID", "Linked Source", "Business Requirement"]]
     req = [["REQ ID", "Linked BR", "Definition"]]
     ac = [["AC ID", "Linked US", "Definition"]]
+    workflows = list(getattr(pack, "workflows", []) or [])
+    reports = list(getattr(pack, "reports", []) or [])
+    integrations = list(getattr(pack, "integrations", []) or [])
+    presets = list(getattr(pack, "acceptance_presets", []) or [])
     for i, module in enumerate(modules[:5], 1):
-        br.append([f"BR-CORE-{i:03d}", "SRC-001", f"Support {module} business capability for {pack.label}."])
-        req.append([f"REQ-CORE-{i:03d}", f"BR-CORE-{i:03d}", f"System shall support {module}, including validation, permissions, audit and reporting where applicable."])
+        workflow_hint = workflows[(i - 1) % len(workflows)] if workflows else "standard review workflow"
+        report_hint = reports[(i - 1) % len(reports)] if reports else "operational report"
+        integration_hint = integrations[(i - 1) % len(integrations)] if integrations else "configured integration"
+        br.append([f"BR-CORE-{i:03d}", "SRC-001", f"Support {module} business capability for {pack.label}, including {workflow_hint} and {report_hint}."])
+        req.append([f"REQ-CORE-{i:03d}", f"BR-CORE-{i:03d}", f"System shall support {module}, {workflow_hint}, validation, permissions, audit, reporting and {integration_hint} where applicable."])
     for i, module in enumerate(modules[:8], 1):
-        ac.append([f"AC-001-{i:02d}", "US-001", f"Given authorized user, when executing {module}, then system validates, processes, audits and exposes expected result."])
+        preset = presets[(i - 1) % len(presets)] if presets else f"Given authorized user, when executing {module}, then system validates, processes, audits and exposes expected result."
+        ac.append([f"AC-001-{i:02d}", "US-001", preset])
     return DomainRenderContext(pack, detection, modules, roles, req, ac, br)
 
 

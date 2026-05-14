@@ -10,3 +10,28 @@ roles:
 quotation_defaults:
   risk_level: detailed
   manday_rate_vnd: 3900000
+
+pack_version: 2
+workflows:
+  - lead capture qualification assignment
+  - opportunity stage approval
+  - discount approval
+  - customer service follow-up
+reports:
+  - sales pipeline forecast
+  - conversion funnel
+  - lost reason analysis
+  - account activity
+integrations:
+  - Email/Calendar
+  - ERP billing
+  - Marketing automation
+  - BI dashboard
+risk_factors:
+  - sales stage definition variance
+  - forecast accuracy
+  - customer data duplication
+acceptance_presets:
+  - Lead duplicate check runs before create
+  - Opportunity forecast updates by probability
+  - Discount approval follows threshold
