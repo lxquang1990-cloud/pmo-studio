@@ -268,6 +268,31 @@ Output:
 
 `--format all` also includes this PDF-ready HTML artifact.
 
+## v1.5 real PDF and release package automation
+
+Real PDF export is available via a lightweight ReportLab backend:
+
+```bash
+pmo --root ~/pmo-projects export <slug> --format pdf --profile customer
+```
+
+Output:
+
+```text
+<project>/exports/customer/pmo-documentation-pack.pdf
+```
+
+`--format all` includes both the real PDF and the print-ready HTML fallback.
+
+Release/package verification:
+
+```bash
+make release-check
+make dist
+```
+
+GitHub release workflow builds and uploads `dist/*` for version tags.
+
 ## CLI reference
 
 

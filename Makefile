@@ -22,3 +22,13 @@ verify: compile smoke benchmark negative
 clean:
 	rm -rf .pytest_cache .mypy_cache build dist *.egg-info
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
+
+
+.PHONY: dist release-check
+
+dist:
+	rm -rf dist
+	$(PYTHON) -m pip wheel . --no-deps --wheel-dir dist
+
+release-check:
+	scripts/release_check.sh /tmp/pmo-release-check

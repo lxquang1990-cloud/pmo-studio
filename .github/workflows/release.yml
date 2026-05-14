@@ -20,14 +20,19 @@ jobs:
 
       - name: Install package
         run: |
-          python -m pip install --upgrade pip build
-          python -m pip install -e .
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
 
       - name: Verify all
         run: scripts/verify_all.sh /tmp/pmo-release-ci
 
       - name: Build package
-        run: python -m build
+        run: |
+          rm -rf dist
+          python -m pip wheel . --no-deps --wheel-dir dist
+
+      - name: Verify dist metadata
+        run: python -m pip install --force-reinstall dist/pmo_studio-*.whl
 
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
