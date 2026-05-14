@@ -24,8 +24,9 @@ def test_build_empty_string():
     c = build_llm("")
     assert isinstance(c, NoopLLMClient)
 
-def test_build_9router_no_key():
-    os.environ.pop("9ROUTER_API_KEY", None)
+def test_build_9router_no_key(monkeypatch):
+    monkeypatch.delenv("9ROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("PMO_DISABLE_SECRETS_ENV", "1")
     with pytest.raises(RuntimeError, match="9ROUTER_API_KEY"):
         build_llm("9router")
 

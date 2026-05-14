@@ -88,6 +88,8 @@ class TokenEstimator:
 
 def _load_secrets_env() -> dict[str, str]:
     """Load API keys from /etc/snailbot/secrets.env if readable."""
+    if os.environ.get("PMO_DISABLE_SECRETS_ENV") == "1":
+        return {}
     secrets: dict[str, str] = {}
     for candidate in ["/etc/snailbot/secrets.env", os.path.expanduser("~/.pmo-secrets.env")]:
         try:

@@ -129,9 +129,9 @@ def test_span_error_recording():
 
 # ── get_9router_key ─────────────────────────────────────────────────────────
 
-def test_get_9router_key_not_set():
-    import os
-    os.environ.pop("9ROUTER_API_KEY", None)
+def test_get_9router_key_not_set(monkeypatch):
+    monkeypatch.delenv("9ROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("PMO_DISABLE_SECRETS_ENV", "1")
     key = get_9router_key()
     assert key is None or key == ""
 

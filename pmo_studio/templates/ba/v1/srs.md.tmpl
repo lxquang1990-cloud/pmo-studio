@@ -1,0 +1,24 @@
+<!-- template_id: {{ template_id }} -->
+<!-- template_version: {{ template_version }} -->
+<!-- domain_pack: {{ domain_id }} -->
+# SRS: {{ project_slug }}
+
+## 1. Introduction
+{{ srs_intro }}
+
+## 2. Product Overview
+Hệ thống gồm các module: {{ module_list }}.
+
+## 3. Functional Requirements
+{{ requirements }}
+
+## 4. Acceptance Criteria
+{{ acceptance }}
+
+## 5. External Interfaces
+{{ integrations }}
+
+## 6. Non-functional Requirements
+- RBAC, audit log, validation, backup/export và error handling.
+- Báo cáo/export phải theo filter và quyền người dùng.
+- Tích hợp phải có API contract, sample data và owner xác nhận.
