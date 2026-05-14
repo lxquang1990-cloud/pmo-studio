@@ -590,11 +590,11 @@ def _generic_modules_from_source(source_text: str) -> list[tuple[str, str]]:
     return rows[:12] or [("Core Workspace", "Source-driven core module"), ("Reports", "Source-driven reports and export")]
 
 def generic_quotation_input(project_name: str, customer: str = "", source_text: str = "") -> QuotationInput:
-    """Generic source-driven quotation. Unknown domain must not fall back to Asset Management."""
-    from pmo_studio.estimation.estimator import estimate_from_source
-    estimates = estimate_from_source(source_text)
+    """Generic source-driven quotation v2. Unknown domain must not fall back to Asset Management."""
+    from pmo_studio.estimation.estimator import estimate_package_from_source
+    package = estimate_package_from_source(source_text)
     grouped: dict[str, list] = {}
-    for estimate in estimates:
+    for estimate in package.features:
         grouped.setdefault(estimate.module, []).append(estimate)
     subsystems = []
     for idx, (module, items) in enumerate(list(grouped.items())[:8], 1):
@@ -602,13 +602,15 @@ def generic_quotation_input(project_name: str, customer: str = "", source_text: 
         for j, estimate in enumerate(items[:8], 1):
             screens = [
                 ScreenRow(
-                    estimate.feature,
-                    estimate.final_manday,
-                    note=f"Complexity={estimate.complexity}; {estimate.rationale}; Source: {estimate.description}",
+                    item.name,
+                    item.final_manday,
+                    note=f"Type={item.work_item_type}; Complexity={item.complexity}; {item.rationale}; Roles={item.role_effort}; Source: {estimate.description}",
                 )
+                for item in estimate.work_items
             ]
             features.append(Feature(f"{idx}.{j} {estimate.feature}", screens=screens))
         subsystems.append(SubSystem(f"{idx}. {module}", features=features))
+    risk_oos = [OutOfScreenItem(f"Risk buffer - {name}", md, note="Auto-calculated from source complexity signals") for name, md in package.risk_buffers.items() if md > 0]
     return QuotationInput(
         project_name=project_name,
         hang_mucs=[HangMuc("I. PHẦN MỀM", subsystems=subsystems)],
@@ -619,19 +621,86 @@ def generic_quotation_input(project_name: str, customer: str = "", source_text: 
             OutOfScreenItem("Hỗ trợ tích hợp & UAT", 5.0),
             OutOfScreenItem("Tài liệu hóa, đào tạo, triển khai", 6.0),
             OutOfScreenItem("Bảo hành/hypercare", 4.0),
-        ],
+        ] + risk_oos,
         assumptions=[
             Assumption("Phạm vi", "Báo giá được sinh theo source đầu vào; các module chưa mô tả đủ sẽ cần workshop xác nhận trước baseline chính thức."),
             Assumption("Kỹ thuật", "Tích hợp bên thứ ba chỉ chốt estimate sau khi có API contract, sample data và môi trường test."),
             Assumption("Dữ liệu", "Khách hàng cung cấp danh mục, biểu mẫu, dữ liệu mẫu và quy tắc validation/mapping."),
+            Assumption("Kỹ thuật", f"Quotation engine v2 role totals: {package.role_totals}. Risk buffers: {package.risk_buffers}."),
         ],
         platform="web", risk_level="detailed", manday_rate_vnd=MANDAY_RATE_VND,
     )
 
+
+def _parse_roles_from_note(note: str) -> dict[str, float]:
+    import ast
+    if "Roles=" not in (note or ""):
+        return {}
+    raw = note.split("Roles=", 1)[1].split(";", 1)[0].strip()
+    try:
+        parsed = ast.literal_eval(raw)
+        return {str(k): float(v) for k, v in parsed.items()} if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
+def _iter_screen_rows(inp: QuotationInput):
+    for hm in inp.hang_mucs:
+        for ss in hm.subsystems:
+            for ft in ss.features:
+                for sc in ft.screens:
+                    yield hm.name, ss.name, ft.name, sc
+
+
+def _build_role_breakdown(ws, inp: QuotationInput):
+    ws.title = "Role Breakdown"
+    headers = ["Role", "Manday", "Cost VND"]
+    for col, h in enumerate(headers, 1):
+        _apply(ws.cell(row=1, column=col, value=h), STYLE_HEADER, _align(h="center"))
+    totals: dict[str, float] = {}
+    for _hm, _ss, _ft, sc in _iter_screen_rows(inp):
+        for role, md in _parse_roles_from_note(sc.note).items():
+            totals[role] = totals.get(role, 0.0) + md
+    if not totals:
+        totals = {"BA": 0.0, "PM": 0.0, "Dev": 0.0, "QA": 0.0, "DevOps": 0.0, "UAT": 0.0, "Training": 0.0}
+    for idx, role in enumerate(["BA", "PM", "Dev", "QA", "DevOps", "UAT", "Training"], 2):
+        md = round(totals.get(role, 0.0), 1)
+        ws.cell(row=idx, column=1, value=role)
+        ws.cell(row=idx, column=2, value=md)
+        ws.cell(row=idx, column=3, value=md * inp.manday_rate_vnd)
+        ws.cell(row=idx, column=3).number_format = '#,##0'
+        for col in range(1, 4):
+            _apply(ws.cell(row=idx, column=col), STYLE_ODD if idx % 2 else STYLE_EVEN)
+    ws.column_dimensions["A"].width = 18
+    ws.column_dimensions["B"].width = 14
+    ws.column_dimensions["C"].width = 20
+
+
+def _build_estimate_rationale(ws, inp: QuotationInput):
+    ws.title = "Estimate Rationale"
+    headers = ["Module", "Subsystem", "Feature", "Work Item", "Type", "Complexity", "Manday", "Rationale", "Role Effort"]
+    for col, h in enumerate(headers, 1):
+        _apply(ws.cell(row=1, column=col, value=h), STYLE_HEADER, _align(h="center"))
+    row = 2
+    for hm, ss, ft, sc in _iter_screen_rows(inp):
+        note = sc.note or ""
+        typ = note.split("Type=", 1)[1].split(";", 1)[0] if "Type=" in note else "screen"
+        complexity = note.split("Complexity=", 1)[1].split(";", 1)[0] if "Complexity=" in note else "medium"
+        rationale = note
+        roles = _parse_roles_from_note(note)
+        values = [hm, ss, ft, sc.name, typ, complexity, sc.manday, rationale, str(roles)]
+        for col, val in enumerate(values, 1):
+            ws.cell(row=row, column=col, value=val)
+            _apply(ws.cell(row=row, column=col), STYLE_ODD if row % 2 else STYLE_EVEN)
+        row += 1
+    widths = [28, 28, 34, 44, 14, 16, 12, 70, 44]
+    for idx, width in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_quotation_xlsx(inp: QuotationInput, out_path: Path) -> Path:
-    """Sinh file báo giá xlsx chuẩn BaoGia_Template_v4."""
+    """Sinh file báo giá xlsx chuẩn BaoGia_Template_v4 + v2 rationale sheets."""
     wb = Workbook()
     ws1 = wb.active
     _build_feature_list(ws1, inp)
@@ -641,6 +710,12 @@ def generate_quotation_xlsx(inp: QuotationInput, out_path: Path) -> Path:
 
     ws3 = wb.create_sheet()
     _build_giadinh(ws3, inp.assumptions)
+
+    ws4 = wb.create_sheet()
+    _build_role_breakdown(ws4, inp)
+
+    ws5 = wb.create_sheet()
+    _build_estimate_rationale(ws5, inp)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(out_path)
@@ -687,7 +762,13 @@ def _estimate_rows_from_workbook(out_path: Path) -> list[list]:
         if "Complexity=" in rationale:
             complexity = rationale.split("Complexity=", 1)[1].split(";", 1)[0].strip() or complexity
         work_id = "SCR-CORE-001"
-        rows.append([f"EST-{idx:03d}", "Feature", str(name), "Feature", work_id, complexity, rationale, manday or 0, None])
+        roles = _parse_roles_from_note(rationale)
+        rows.append([
+            f"EST-{idx:03d}", "Feature", str(name), "Feature", work_id, complexity, rationale,
+            roles.get("BA", 0), roles.get("PM", 0), roles.get("Dev", 0), roles.get("QA", 0),
+            roles.get("DevOps", 0), roles.get("UAT", 0), roles.get("Training", 0),
+            manday or 0, None
+        ])
         idx += 1
     return rows
 
@@ -704,9 +785,12 @@ def _append_traceability_sheet(out_path: Path) -> None:
     if "Estimate Detail" in wb.sheetnames:
         del wb["Estimate Detail"]
     ws = wb.create_sheet("Estimate Detail")
-    ws.append(["EST ID", "Module", "Function", "Work Item Type", "Work Item ID", "Complexity", "Rationale", "Total md", "Cost VND"])
-    rows = _estimate_rows_from_workbook(out_path) or [["EST-001", "Quotation", "BaoGia_Template_v4 screen estimate", "Screen", "SCR-CORE-001", "high", "Linked to generated SRS screen for PMO traceability", 55, 55 * MANDAY_RATE_VND]]
+    ws.append(["EST ID", "Module", "Function", "Work Item Type", "Work Item ID", "Complexity", "Rationale", "BA", "PM", "Dev", "QA", "DevOps", "UAT", "Training", "Total md", "Cost VND"])
+    rows = _estimate_rows_from_workbook(out_path) or [["EST-001", "Quotation", "BaoGia_Template_v4 screen estimate", "screen", "SCR-CORE-001", "high", "Linked to generated SRS screen for PMO traceability", 0, 0, 55, 0, 0, 0, 0, 55, 55 * MANDAY_RATE_VND]]
     for row in rows:
+        if len(row) == 9:
+            # Backward-compatible old rows.
+            row = row[:7] + [0, 0, 0, 0, 0, 0, 0] + row[7:]
         if row[-1] is None:
             row[-1] = float(row[-2] or 0) * MANDAY_RATE_VND
         ws.append(row)
