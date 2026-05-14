@@ -125,9 +125,9 @@ def _artifact_consistency(project_root: Path, artifact_texts: dict[str, str]) ->
     for rel, text in artifact_texts.items():
         if "{{" in text or "}}" in text:
             findings.append(QualityFinding("QI-TEMPLATE-001", "high", "template", "Unrendered template token found.", artifact=rel))
-        ids = re.findall(r"\b(?:REQ|BR|US|AC|TC)-[A-Z0-9-]*\d+\b", text)
+        ids = re.findall(r"^\s*(?:#{1,6}\s*)?((?:REQ|BR|US|TC)-[A-Z0-9-]*\d+)\b", text, flags=re.M)
         if len(ids) != len(set(ids)) and rel.endswith(("srs.md", "05-test-cases.md")):
-            findings.append(QualityFinding("QI-ID-001", "low", "consistency", "Duplicate requirement/test identifiers detected.", artifact=rel))
+            findings.append(QualityFinding("QI-ID-001", "low", "consistency", "Duplicate primary requirement/test definitions detected.", artifact=rel))
     return findings
 
 

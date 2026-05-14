@@ -18,7 +18,7 @@ REVIEW_TARGETS = {
     "prd": "artifacts/ba/01-prd.md",
     "brd": "artifacts/ba/02-brd.md",
     "srs": "artifacts/ba/03-srs/srs.md",
-    "user_stories": "artifacts/ba/04-user-stories.md",
+    "user_stories": "artifacts/ba/04-us/US-001.md",
     "test_cases": "artifacts/ba/05-test-cases.md",
     "uat_plan": "artifacts/ic/04-uat-plan.md",
     "charter": "artifacts/pm/01-charter.md",
@@ -120,7 +120,7 @@ def _review_artifact(project_root: Path, key: str, rel: str) -> ArtifactReview:
         findings.append(CustomerReviewFinding(f"CR-{key.upper()}-PLACEHOLDER", "high", key, rel, "Customer-facing placeholder text remains.", "Replace placeholders with explicit assumptions, exclusions, or confirmed values.", ", ".join(placeholders[:8])))
     if "{{" in text or "}}" in text:
         findings.append(CustomerReviewFinding(f"CR-{key.upper()}-TEMPLATE", "high", key, rel, "Unrendered template token remains.", "Fix template context and regenerate this artifact."))
-    if key in {"srs", "brd", "prd"} and not re.search(r"\b(assumption|giả định|out of scope|ngoài phạm vi|scope|phạm vi)\b", text, flags=re.I):
+    if key in {"srs", "brd", "prd"} and not re.search(r"\b(assumption|giả định|out of scope|ngoài phạm vi|scope|phạm vi|phase 2|optional|exclusion|loại trừ|không bao gồm)\b", text, flags=re.I):
         findings.append(CustomerReviewFinding(f"CR-{key.upper()}-SCOPE", "medium", key, rel, "Scope/assumption boundaries are not explicit.", "Add assumptions, exclusions, and Phase 2 boundaries."))
     if key in {"user_stories", "test_cases", "uat_plan"} and not re.search(r"\b(Given|When|Then|Expected|Acceptance|AC-|TC-|nghiệm thu)\b", text, flags=re.I):
         findings.append(CustomerReviewFinding(f"CR-{key.upper()}-TESTABILITY", "medium", key, rel, "Testability cues are weak or missing.", "Add Given/When/Then, expected results, and AC/TC links."))
