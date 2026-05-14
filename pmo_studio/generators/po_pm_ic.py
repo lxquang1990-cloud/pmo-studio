@@ -102,9 +102,123 @@ Triển khai web app LIQ LegalIQ, bao gồm hỏi đáp pháp lý bằng AI, qu�
     (d / "07-lessons-learned.md").write_text("# Lessons Learned\n", encoding="utf-8")
     project.mark_stage("pm", "completed")
 
+
+def _read_project_source(project: Project, max_chars: int = 30000) -> str:
+    text = ""
+    try:
+        for source_path in sorted((project.root / "source" / "redacted").glob("*")):
+            if source_path.is_file():
+                text += "\n" + source_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+    return text[:max_chars]
+
+def _is_asset_project(project: Project) -> bool:
+    haystack = " ".join([
+        str(getattr(project.config, "project_slug", project.root.name)),
+        str(getattr(project.config, "product", "")),
+        str(getattr(project.config, "customer", "")),
+        str(getattr(project.config, "brief", "")),
+        _read_project_source(project),
+    ]).lower()
+    return any(k in haystack for k in ["tài sản", "tai san", "ttb", "asset management", "asset master", "kiểm kê", "khấu hao", "thanh lý"])
+
+def _generic_source_modules(project: Project) -> list[str]:
+    import re
+    text = _read_project_source(project)
+    modules = []
+    for line in text.splitlines():
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 2 and re.match(r"^(\d+(?:\.\d+)?|[IVX]+)$", cells[0], re.I):
+            name = cells[1]
+            if name and name.lower() not in {"chức năng", "mô tả"} and len(name) > 2:
+                modules.append(name[:90])
+    if not modules:
+        modules = ["Core Workflow", "Administration", "Reports"]
+    out=[]
+    for m in modules:
+        if m.lower() not in [x.lower() for x in out]:
+            out.append(m)
+    return out[:8]
+
+def generate_generic_po(project: Project) -> None:
+    d = project.root / "artifacts/po"; d.mkdir(parents=True, exist_ok=True)
+    modules = _generic_source_modules(project)
+    (d / "01-vision.md").write_text(f"""# Product Vision
+
+## Domain: Source-driven Generic
+
+## Vision Statement
+Triển khai hệ thống theo source đầu vào cho {getattr(project.config, 'customer', 'Customer')}, không áp đặt template domain khi chưa có domain pack riêng.
+
+## MVP Boundaries
+- Included: {', '.join(modules[:6])}.
+- Phase 2: integrations, advanced workflow, automation and reporting enhancements after API/data contracts are confirmed.
+- Excluded: any module not described in source or not approved in scope baseline.
+
+## Business Goals
+- BG-001: Số hóa các module nghiệp vụ được mô tả trong source.
+- BG-002: Chuẩn hóa workflow, permission, reporting and traceability.
+- BG-003: Tạo baseline đủ cho BA/Dev/QA/UAT review.
+
+## Implementation Readiness
+- API baseline: API-CORE-001 for source-driven modules.
+- Workflow baseline: WF-CORE-001 for validation, workflow, audit and reporting.
+- Screen baseline: SCR-CORE-001 covers source-driven workspace screens.
+- Test baseline: TC-001..TC-008 cover source-derived acceptance criteria.
+""", encoding="utf-8")
+    (d / "02-okr.md").write_text("# OKR Set\n\n| Objective | Key Result |\n|---|---|\n| Source-driven delivery | 100% MVP modules traced from source to REQ/AC/TC |\n", encoding="utf-8")
+    (d / "03-roadmap.md").write_text("# Roadmap\n\n## Now\nSource baseline and MVP modules.\n\n## Next\nIntegration/UAT hardening.\n\n## Later\nAdvanced automation and analytics.\n", encoding="utf-8")
+    wb=Workbook(); ws=wb.active; ws.title="Backlog"; ws.append(["Epic","Feature","Priority"])
+    for m in modules: ws.append([m, f"Implement {m}", "P0"])
+    wb.save(d/"04-backlog.xlsx")
+    (d / "05-release-notes.md").write_text("# Release Notes\n\n## v0.1\nInitial source-driven PMO pack.\n", encoding="utf-8")
+    project.mark_stage("po", "completed")
+
+def generate_generic_pm(project: Project) -> None:
+    d = project.root / "artifacts/pm"; d.mkdir(parents=True, exist_ok=True)
+    modules = _generic_source_modules(project)
+    (d / "01-charter.md").write_text(f"""# Project Charter
+
+## Domain
+Source-driven Generic
+
+## Objective
+Triển khai hệ thống theo source đầu vào, với MVP gồm: {', '.join(modules[:8])}.
+
+## MVP Scope
+{chr(10).join(f'- BR-CORE-{i:03d}: {m}' for i, m in enumerate(modules[:5], 1))}
+
+## Implementation Readiness
+- API baseline: API-CORE-001 for source-driven modules.
+- Workflow baseline: WF-CORE-001 for validation, workflow, audit and reporting.
+- Screen baseline: SCR-CORE-001 covers source-driven workspace screens.
+- Test baseline: TC-001..TC-008 cover source-derived acceptance criteria.
+
+## Risks
+| Risk ID | Description | Mitigation |
+|---|---|---|
+| RISK-001 | Source chưa đủ chi tiết để chốt estimate chính thức | Workshop scope and assumption log |
+| RISK-002 | Integration/API chưa có contract | Baseline API contract before implementation sprint |
+| RISK-003 | Workflow thực tế phức tạp hơn source | Phase scope split and CR control |
+""", encoding="utf-8")
+    wb=Workbook(); ws=wb.active; ws.title="WBS"; ws.append(["Phase","Work Package","Owner"])
+    for m in modules[:8]: ws.append(["Build", m, "Dev/BA"])
+    wb.save(d/"02-wbs.xlsx")
+    wb=Workbook(); ws=wb.active; ws.title="RACI"; ws.append(["Activity","Business","IT","Vendor","Sponsor"]); ws.append(["Scope baseline","R","C","C","A"]); wb.save(d/"03-raci.xlsx")
+    wb=Workbook(); ws=wb.active; ws.title="Risks"; ws.append(["Risk","Impact","Mitigation"]); ws.append(["Unclear scope","High","Workshop + assumptions"]); wb.save(d/"04-risk-register.xlsx")
+    (d / "05-status-report.md").write_text("# Status Report\n\nSource-driven PMO pack generated.\n", encoding="utf-8")
+    (d / "06-change-request-template.md").write_text("# Change Request Template\n", encoding="utf-8")
+    (d / "07-lessons-learned.md").write_text("# Lessons Learned\n", encoding="utf-8")
+    project.mark_stage("pm", "completed")
+
 def generate_po(project: Project) -> None:
     if _is_legal_project(project):
         return generate_legal_po(project)
+    if not _is_asset_project(project):
+        return generate_generic_po(project)
     domain = get_domain(project.config.domain_pack)
     d = project.root / "artifacts/po"
     d.mkdir(parents=True, exist_ok=True)
@@ -174,6 +288,8 @@ def _project_context(project_root: Path) -> dict:
 def generate_pm(project: Project) -> None:
     if _is_legal_project(project):
         return generate_legal_pm(project)
+    if not _is_asset_project(project):
+        return generate_generic_pm(project)
     domain = get_domain(project.config.domain_pack)
     d = project.root / "artifacts/pm"
     d.mkdir(parents=True, exist_ok=True)

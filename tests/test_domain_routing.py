@@ -55,3 +55,56 @@ def test_legaliq_does_not_fall_back_to_asset_management():
         assert "ủy quyền" in quote
         assert "quản lý danh mục tài sản" not in quote
         assert "asset management" not in quote
+
+
+def test_unknown_domain_uses_generic_source_not_asset_or_legal():
+    with TemporaryDirectory() as td:
+        root_base = Path(td)
+        project_root = root_base / "crm-regression"
+        project_root.mkdir(parents=True)
+        source_dir = project_root / "source" / "redacted"
+        source_dir.mkdir(parents=True)
+        (source_dir / "source.md").write_text(
+            "| STT | CHỨC NĂNG | MÔ TẢ |\n"
+            "| 1 | Quản lý Lead | Capture, assign, qualify sales leads |\n"
+            "| 2 | Quản lý Opportunity | Pipeline, stage, probability, expected revenue |\n"
+            "| 3 | Quản lý Customer | Customer profile, contact, activity history |\n"
+            "| 4 | Báo cáo Sales Pipeline | Forecast, conversion, win/loss report |\n",
+            encoding="utf-8",
+        )
+        project = Project(project_root, ProjectConfig(project_slug="crm-regression", customer="Demo Customer"))
+
+        generate_po(project)
+        generate_pm(project)
+        generate_ba_from_sources(project)
+
+        text = "\n".join(
+            (project_root / rel).read_text(encoding="utf-8")
+            for rel in [
+                "artifacts/po/01-vision.md",
+                "artifacts/pm/01-charter.md",
+                "artifacts/ba/01-prd.md",
+                "artifacts/ba/02-brd.md",
+                "artifacts/ba/05-test-cases.md",
+            ]
+        ).lower()
+        assert "quản lý lead" in text
+        assert "opportunity" in text
+        assert "asset management" not in text
+        assert "quản lý trang thiết bị" not in text
+        assert "ttb/tài sản" not in text
+        assert "legaliq" not in text
+        assert "ủy quyền" not in text
+
+        wb = load_workbook(project_root / "artifacts/ba/06-quotation.xlsx", data_only=True)
+        quote = "\n".join(
+            str(cell)
+            for ws in wb.worksheets
+            for row in ws.iter_rows(values_only=True)
+            for cell in row
+            if cell is not None
+        ).lower()
+        assert "quản lý lead" in quote
+        assert "opportunity" in quote
+        assert "quản lý danh mục tài sản" not in quote
+        assert "hỏi & đáp pháp lý" not in quote

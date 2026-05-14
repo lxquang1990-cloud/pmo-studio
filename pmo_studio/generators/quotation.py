@@ -551,6 +551,75 @@ def legal_quotation_input(project_name: str, customer: str = "") -> QuotationInp
         platform="web", risk_level="detailed", manday_rate_vnd=MANDAY_RATE_VND,
     )
 
+
+def _read_project_source(project, max_chars: int = 30000) -> str:
+    text = ""
+    try:
+        for source_path in sorted((project.root / "source" / "redacted").glob("*")):
+            if source_path.is_file():
+                text += "\n" + source_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+    return text[:max_chars]
+
+def _is_asset_text(text: str) -> bool:
+    lower = text.lower()
+    return any(k in lower for k in ["tài sản", "tai san", "ttb", "asset management", "asset master", "kiểm kê", "khấu hao", "thanh lý"])
+
+def _is_legal_text(text: str) -> bool:
+    lower = text.lower()
+    return any(k in lower for k in ["legaliq", "pháp lý", "phap ly", "ủy quyền", "uy quyen", "hợp đồng", "hop dong", "b.pctt"])
+
+def _generic_modules_from_source(source_text: str) -> list[tuple[str, str]]:
+    import re
+    rows: list[tuple[str, str]] = []
+    for line in source_text.splitlines():
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and re.match(r"^(\d+(?:\.\d+)?|[IVX]+)$", cells[0], re.I):
+            name = cells[1]
+            desc = cells[2]
+            if name and name.lower() not in {"chức năng", "mô tả"} and len(name) > 2:
+                rows.append((name[:90], desc[:180] if desc else name[:180]))
+    if not rows:
+        for line in source_text.splitlines():
+            line = line.strip(" -•\t")
+            if len(line) > 12 and len(rows) < 8:
+                rows.append((line[:80], line[:180]))
+    return rows[:12] or [("Core Workspace", "Source-driven core module"), ("Reports", "Source-driven reports and export")]
+
+def generic_quotation_input(project_name: str, customer: str = "", source_text: str = "") -> QuotationInput:
+    """Generic source-driven quotation. Unknown domain must not fall back to Asset Management."""
+    modules = _generic_modules_from_source(source_text)
+    subsystems = []
+    for idx, (name, desc) in enumerate(modules[:6], 1):
+        screens = [
+            ScreenRow(f"{name} - Danh sách/tra cứu", 2.5, note=desc),
+            ScreenRow(f"{name} - Tạo/Cập nhật/Chi tiết", 3.0, note="Form nghiệp vụ, validation, attachment/audit nếu có"),
+        ]
+        if idx <= 3:
+            screens.append(ScreenRow(f"{name} - Quy trình/Phê duyệt", 3.0, note="Workflow, permission, notification và trạng thái xử lý"))
+        subsystems.append(SubSystem(f"{idx}. {name}", features=[Feature(f"{idx}.1 {name}", screens=screens)]))
+    return QuotationInput(
+        project_name=project_name,
+        hang_mucs=[HangMuc("I. PHẦN MỀM", subsystems=subsystems)],
+        out_of_screen=[
+            OutOfScreenItem("Thiết lập dự án & DevOps", 4.0),
+            OutOfScreenItem("Phân tích chi tiết nghiệp vụ & workshop scope", 5.0),
+            OutOfScreenItem("Thiết kế dữ liệu, migration/import template", 4.0),
+            OutOfScreenItem("Hỗ trợ tích hợp & UAT", 5.0),
+            OutOfScreenItem("Tài liệu hóa, đào tạo, triển khai", 6.0),
+            OutOfScreenItem("Bảo hành/hypercare", 4.0),
+        ],
+        assumptions=[
+            Assumption("Phạm vi", "Báo giá được sinh theo source đầu vào; các module chưa mô tả đủ sẽ cần workshop xác nhận trước baseline chính thức."),
+            Assumption("Kỹ thuật", "Tích hợp bên thứ ba chỉ chốt estimate sau khi có API contract, sample data và môi trường test."),
+            Assumption("Dữ liệu", "Khách hàng cung cấp danh mục, biểu mẫu, dữ liệu mẫu và quy tắc validation/mapping."),
+        ],
+        platform="web", risk_level="detailed", manday_rate_vnd=MANDAY_RATE_VND,
+    )
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_quotation_xlsx(inp: QuotationInput, out_path: Path) -> Path:
@@ -574,18 +643,14 @@ def generate_quotation_for_project(project, out_path: Path | None = None) -> Pat
     """Wrapper used by BA generators with lightweight domain routing."""
     project_name = getattr(project.config, "product", None) or getattr(project.config, "project_slug", project.root.name)
     customer = getattr(project.config, "customer", "")
-    source_text = ""
-    try:
-        for source_path in sorted((project.root / "source" / "redacted").glob("*")):
-            if source_path.is_file():
-                source_text += "\n" + source_path.read_text(encoding="utf-8", errors="ignore")[:10000]
-    except Exception:
-        source_text = ""
-    haystack = f"{project_name} {customer} {project.root.name} {source_text}".lower()
-    if any(k in haystack for k in ["legaliq", "pháp lý", "phap ly", "ủy quyền", "uy quyen", "hợp đồng", "hop dong", "b.pctt"]):
+    source_text = _read_project_source(project)
+    haystack = f"{project_name} {customer} {project.root.name} {source_text}"
+    if _is_legal_text(haystack):
         inp = legal_quotation_input(project_name=project_name, customer=customer)
-    else:
+    elif _is_asset_text(haystack):
         inp = default_quotation_input(project_name=project_name, customer=customer)
+    else:
+        inp = generic_quotation_input(project_name=project_name, customer=customer, source_text=source_text)
     inp.manday_rate_vnd = getattr(project.config, "manday_rate_vnd", MANDAY_RATE_VND)
     if out_path is None:
         out_path = project.root / "artifacts" / "ba" / "06-quotation.xlsx"

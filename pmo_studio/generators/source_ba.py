@@ -249,11 +249,164 @@ As a user nội bộ, I want hỏi đáp pháp lý/nghiệp vụ qua FAQ/AI và 
     generate_quotation_for_project(project, ba_dir / "06-quotation.xlsx")
     project.mark_stage("ba.source_driven", "completed")
 
+
+def _is_asset_project(project: Project, source_text: str) -> bool:
+    haystack = " ".join([
+        str(getattr(project.config, "project_slug", project.root.name)),
+        str(getattr(project.config, "product", "")),
+        str(getattr(project.config, "customer", "")),
+        str(getattr(project.config, "brief", "")),
+        source_text,
+    ]).lower()
+    return any(k in haystack for k in ["tài sản", "tai san", "ttb", "asset management", "asset master", "kiểm kê", "khấu hao", "thanh lý"])
+
+def generate_generic_ba_from_sources(project: Project, source_text: str) -> None:
+    """Generic source-driven BA baseline for unknown domains.
+
+    Unknown domain must use extracted source context, never Asset Management defaults.
+    """
+    domain = get_domain(project.config.domain_pack)
+    intel = build_intelligence(source_text, domain)
+    ba_dir = project.root / "artifacts" / "ba"
+    srs_dir = ba_dir / "03-srs"
+    us_dir = ba_dir / "04-us"
+    for d in [ba_dir, srs_dir, srs_dir / "screens", srs_dir / "apis", srs_dir / "workflows", srs_dir / "reports", us_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+    modules = intel.modules or ["core", "workflow", "report"]
+    roles = intel.roles or ["Admin", "Business User", "Approver", "Viewer"]
+    integrations = intel.integrations or ["Integration scope cần xác nhận"]
+    req_rows = [["REQ ID", "Definition"]]
+    for i, m in enumerate(modules[:5], 1):
+        req_rows.append([f"REQ-CORE-{i:03d}", f"Hệ thống phải hỗ trợ module {m} theo source đầu vào, bao gồm tra cứu, xử lý nghiệp vụ, phân quyền, audit và báo cáo liên quan."])
+    ac_rows = [["AC ID", "Definition"]]
+    for i, m in enumerate(modules[:8], 1):
+        ac_rows.append([f"AC-001-{i:02d}", f"Given user có quyền với module {m}, when thực hiện nghiệp vụ chính, then hệ thống xử lý đúng dữ liệu source, ghi nhận trạng thái và audit/log cần thiết."])
+    req_defs = table(req_rows)
+    ac_defs = table(ac_rows)
+    summary = bullets(intel.summary)
+    prd = f"""# PRD: {getattr(project.config, 'project_slug', project.root.name)}
+
+## Overview
+Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(project.config, 'project_slug', project.root.name)}. Đây là generic source-driven baseline cho domain chưa có template riêng.
+
+## Source Intelligence Summary
+{summary}
+
+## Personas / Stakeholders
+{bullets(roles)}
+
+## Product Modules
+{bullets(modules)}
+
+## Business Goals
+- BG-001: Số hóa các nghiệp vụ chính được mô tả trong source đầu vào.
+- BG-002: Chuẩn hóa dữ liệu, workflow, phân quyền, báo cáo và traceability.
+- BG-003: Tạo baseline đủ để PO/PM/BA/IC review, estimate và triển khai MVP.
+
+## Scope
+### MVP
+{bullets([f'{m}: xử lý nghiệp vụ, tra cứu, validation, trạng thái và báo cáo liên quan.' for m in modules[:6]])}
+
+### Phase 2 / Optional
+{bullets(integrations)}
+
+## Requirements Baseline
+{req_defs}
+
+## Acceptance Baseline
+{ac_defs}
+
+## Implementation Readiness
+- API baseline: API-CORE-001.
+- Workflow baseline: WF-CORE-001.
+- Screen baseline: SCR-CORE-001.
+- Test baseline: TC-001..TC-008.
+"""
+    brd = f"""# BRD
+
+## Business Context
+Dự án cần số hóa các module nghiệp vụ được cung cấp trong source đầu vào, với baseline generic để tránh áp đặt domain sai khi chưa có domain pack riêng.
+
+## Business Drivers
+- Cần chuyển source mô tả thành bộ tài liệu PO/PM/BA/IC có thể review.
+- Cần chuẩn hóa module, workflow, permission, integration, reporting và assumptions.
+- Cần giữ traceability từ source tới BR/REQ/US/AC/TC/EST.
+
+## Business Requirements
+{req_defs}
+
+## Acceptance Definitions
+{ac_defs}
+
+## Key Workflows
+{bullets(intel.workflows or ['User nhập/tra cứu dữ liệu → hệ thống validate → xử lý workflow → ghi audit/log → xuất báo cáo hoặc thông báo.'])}
+
+## Risks and Assumptions
+{bullets(intel.risks)}
+"""
+    srs = f"""# SRS
+
+## 1. Introduction
+SRS mô tả baseline generic source-driven cho domain chưa có template riêng.
+
+## 2. Product Overview
+Hệ thống gồm các module: {', '.join(modules[:8])}.
+
+## 3. Functional Requirements
+{req_defs}
+
+## 4. Acceptance Criteria
+{ac_defs}
+
+## 5. External Interfaces
+{bullets(integrations)}
+
+## 6. Non-functional Requirements
+- RBAC, audit log, validation, backup/export và error handling.
+- Báo cáo/export phải theo filter và quyền người dùng.
+- Tích hợp phải có API contract, sample data và owner xác nhận.
+"""
+    (ba_dir / "01-prd.md").write_text(prd, encoding="utf-8")
+    (ba_dir / "02-brd.md").write_text(brd, encoding="utf-8")
+    (srs_dir / "srs.md").write_text(srs, encoding="utf-8")
+    (srs_dir / "screens" / "SCR-CORE-001.md").write_text(f"# SCR-CORE-001: Source-driven Workspace\n\n**Linked REQ:** REQ-CORE-001\n\nScreens cover: {', '.join(modules[:8])}.\n", encoding="utf-8")
+    (srs_dir / "apis" / "API-CORE-001.md").write_text("# API-CORE-001: Source-driven API\n\n**Linked REQ:** REQ-CORE-001\n\nEndpoints support CRUD/search/workflow/report/export for source-driven modules.\n", encoding="utf-8")
+    (srs_dir / "workflows" / "WF-CORE-001.md").write_text("# WF-CORE-001: Source-driven Workflow\n\n**Linked REQ:** REQ-CORE-001\n\nUpload/enter data → validate → process workflow → audit → report/export/notification.\n", encoding="utf-8")
+    (us_dir / "US-001.md").write_text(f"""# User Story US-001: Xử lý nghiệp vụ theo source đầu vào
+
+**Linked REQ:** REQ-CORE-001
+**Linked Work Items:** SCR-CORE-001, API-CORE-001, WF-CORE-001
+
+As a business user, I want the system to support source-defined modules so that I can process work with validation, permission, audit and reporting.
+
+## Acceptance Criteria
+{ac_defs}
+""", encoding="utf-8")
+    tc_rows = [["ID", "Linked AC", "Type", "Steps / Input", "Expected Result"]]
+    for i, m in enumerate(modules[:8], 1):
+        tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Source-driven", f"Execute main workflow for {m}", "Data is validated, saved/processed, audited and visible in reports according to permission"])
+    (ba_dir / "05-test-cases.md").write_text(f"""# Test Cases
+
+## Referenced Requirements
+{req_defs}
+
+## Canonical Acceptance Definitions
+{ac_defs}
+
+## Coverage Matrix
+{table(tc_rows)}
+""", encoding="utf-8")
+    from pmo_studio.generators.quotation import generate_quotation_for_project
+    generate_quotation_for_project(project, ba_dir / "06-quotation.xlsx")
+    project.mark_stage("ba.source_driven", "completed")
+
 def generate_ba_from_sources(project: Project, llm: LLMClient | None = None) -> None:
     llm = llm or NoopLLMClient()
     source_text = read_redacted_sources(project)
     if _is_legal_project(project, source_text):
         return generate_legal_ba_from_sources(project, source_text)
+    if not _is_asset_project(project, source_text):
+        return generate_generic_ba_from_sources(project, source_text)
     allocator = IdAllocator.from_state(project.state.id_counters)
     br = allocator.issue("BR", "CORE")
     req = allocator.issue("REQ", "CORE")
