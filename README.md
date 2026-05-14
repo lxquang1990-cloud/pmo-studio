@@ -101,16 +101,66 @@ Every command is scoped to that project root:
 ├── quality/          # Gate A/B/C results and summary
 ├── traceability/     # RTM and graph outputs
 ├── exports/          # customer/management export packages
+├── review/           # review checklist + sign-off state
 └── metrics/          # run metrics
 ```
 
 Generators read only `source/redacted/` inside the current project folder and write outputs only under that same project folder. The regression suite includes project-isolation tests to prevent cross-project source leakage.
 
-Domain routing is also project-local:
+## v1.1 workflow: domain packs, templates, sign-off, dashboard
 
-- Asset Management source → Asset Management generator.
-- LegalIQ / legal source → LegalIQ generator.
-- Unknown/new domain source → generic source-driven generator, not Asset Management fallback.
+Domain routing is project-local and source-driven:
+
+- Asset Management source → `asset_management` domain pack.
+- LegalIQ / legal source → `legal_ai` domain pack.
+- CRM source → `crm` domain pack.
+- eOffice/HSE/Digital Signature/PMS/HRM/Procurement/LMS sources → matching YAML domain packs.
+- Unknown/new domain source → `generic` source-driven fallback, never Asset Management fallback.
+
+Domain packs live in:
+
+```text
+pmo_studio/domain/packs/*.yaml
+```
+
+BA artifacts are rendered through versioned templates:
+
+```text
+pmo_studio/templates/ba/v1/prd.md.tmpl
+pmo_studio/templates/ba/v1/brd.md.tmpl
+pmo_studio/templates/ba/v1/srs.md.tmpl
+pmo_studio/templates/ba/v1/us.md.tmpl
+pmo_studio/templates/ba/v1/test_cases.md.tmpl
+```
+
+Each generated Markdown artifact includes metadata such as `template_id`, `template_version`, and `domain_pack`.
+
+Recommended release workflow for a new project:
+
+```bash
+pmo --root ~/pmo-projects init <slug> --customer '<customer>' --source <source-file>
+pmo --root ~/pmo-projects detect-domain <slug>
+pmo --root ~/pmo-projects generate <slug> all --from-sources --llm noop --no-refine
+pmo --root ~/pmo-projects trace <slug> --validate
+pmo --root ~/pmo-projects run-gates <slug> --include-c --llm noop
+pmo --root ~/pmo-projects export <slug> --format all --profile customer
+pmo --root ~/pmo-projects index <slug>
+pmo --root ~/pmo-projects signoff <slug> Final approved --by '<reviewer>' --note 'Ready for customer'
+```
+
+After final sign-off, exports are locked by default. To intentionally regenerate an export after approval:
+
+```bash
+pmo --root ~/pmo-projects export <slug> --format all --profile customer --force
+```
+
+Dashboard outputs:
+
+```text
+<project>/PROJECT_INDEX.md
+<project>/index.html
+<project>/exports/management/index.html
+```
 
 ## CLI reference
 
