@@ -41,6 +41,10 @@ from pmo_studio.domain.manager import list_domains, inspect_domain, validate_dom
 from pmo_studio.integrations.telegram_workflow import build_delivery_manifest, ingest_inbound, run_session, load_session
 from pmo_studio.quality.intelligence import write_quality_intelligence
 from pmo_studio.quality.customer_review import write_customer_review
+from pmo_studio.quality.output_quality import write_output_quality
+from pmo_studio.quality.source_refiner import write_source_refinement
+from pmo_studio.exporters.uat_pack import export_test_case_excel, export_uat_pack
+from pmo_studio.quality.consistency_engine import write_consistency_report
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -443,6 +447,30 @@ def cmd_web(args):
     from pmo_studio.webapp import run_web
     run_web(Path(args.root), host=args.host, port=args.port)
 
+def cmd_output_quality(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_output_quality(p.root, apply=not args.check)
+    print(f"Output quality: {out}")
+
+def cmd_source_refiner(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_source_refinement(p.root, apply=not args.check)
+    print(f"Source refiner: {out}")
+
+def cmd_uat_pack(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = export_uat_pack(p.root) if args.zip else export_test_case_excel(p.root)
+    print(f"UAT pack: {out}")
+
+def cmd_consistency(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_consistency_report(p.root)
+    print(f"Consistency: {out}")
+
 def cmd_telegram(args):
     if args.action == "ingest":
         result = ingest_inbound(Path(args.root), args.chat_id, message_id=args.message_id, source_path=args.source, text=args.text, slug=args.slug, customer=args.customer, product=args.product)
@@ -668,6 +696,14 @@ def build_parser():
     qi.add_argument("slug", nargs="?"); qi.set_defaults(func=cmd_quality)
     crv = sub.add_parser("customer-review", help="Run customer-ready review mode")
     crv.add_argument("slug", nargs="?"); crv.set_defaults(func=cmd_customer_review)
+    oq = sub.add_parser("output-quality", help="Run v2.6 output quality upgrade")
+    oq.add_argument("slug", nargs="?"); oq.add_argument("--check", action="store_true"); oq.set_defaults(func=cmd_output_quality)
+    sr = sub.add_parser("source-refiner", help="Run v2.7 source-grounded refiner")
+    sr.add_argument("slug", nargs="?"); sr.add_argument("--check", action="store_true"); sr.set_defaults(func=cmd_source_refiner)
+    up = sub.add_parser("uat-pack", help="Export v2.8 Test Case Excel + UAT Pack")
+    up.add_argument("slug", nargs="?"); up.add_argument("--zip", action="store_true", default=True); up.set_defaults(func=cmd_uat_pack)
+    ce = sub.add_parser("consistency", help="Run v2.9 Consistency Engine v2")
+    ce.add_argument("slug", nargs="?"); ce.set_defaults(func=cmd_consistency)
     web = sub.add_parser("web", help="Run local PMO Studio Web UI")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
