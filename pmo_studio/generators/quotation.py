@@ -499,6 +499,58 @@ def default_quotation_input(project_name: str, customer: str = "") -> QuotationI
         manday_rate_vnd=MANDAY_RATE_VND,
     )
 
+
+def legal_quotation_input(project_name: str, customer: str = "") -> QuotationInput:
+    """Deterministic quotation for LegalIQ / legal Q&A projects."""
+    hang_mucs = [HangMuc("I. PHẦN MỀM", subsystems=[
+        SubSystem("1. Phân hệ Hỏi & Đáp Pháp lý", features=[Feature("1.1 Q&A, FAQ và câu hỏi yêu cầu", screens=[
+            ScreenRow("Giao diện Hỏi & Đáp Pháp lý", 4.0, note="FAQ, lĩnh vực, câu hỏi yêu thích, thông báo/tài liệu mới"),
+            ScreenRow("Quản lý Danh mục FAQ", 2.5, note="CRUD FAQ theo lĩnh vực/phân loại"),
+            ScreenRow("Quản lý Câu hỏi yêu cầu", 4.0, note="Gửi, phân luồng, trả lời, phản hồi, SLA"),
+        ])]),
+        SubSystem("2. AI Trả lời tự động", features=[Feature("2.1 AI legal answer engine", screens=[
+            ScreenRow("Tích hợp dữ liệu eOffice cho AI", 4.0, note="Lấy tài liệu ban hành/đính kèm phục vụ huấn luyện"),
+            ScreenRow("AI trả lời có trích dẫn nguồn", 6.0, note="Kịch bản đã/chưa xác định lĩnh vực, fallback B.PCTT"),
+            ScreenRow("Quản trị huấn luyện AI", 4.0, note="Quản lý dữ liệu, prompt/rule, lịch sử, đánh giá"),
+        ])]),
+        SubSystem("3. Quản lý Ủy quyền", features=[Feature("3.1 Vòng đời ủy quyền", screens=[
+            ScreenRow("Soạn thảo Ủy quyền theo mẫu", 4.0),
+            ScreenRow("Phê duyệt/Ký eOffice và ban hành", 4.0),
+            ScreenRow("Tra cứu/Đồng bộ/Tích hợp ứng dụng khác", 4.0),
+            ScreenRow("AI kiểm tra ủy quyền", 5.0, note="Cảnh báo không phù hợp theo phân cấp/lịch sử"),
+        ])]),
+        SubSystem("4. Hợp đồng & Thẩm định", features=[Feature("4.1 Legal review workflow", screens=[
+            ScreenRow("Soạn thảo Hợp đồng theo mẫu", 5.0),
+            ScreenRow("Rà soát & Phê duyệt Hợp đồng", 5.0),
+            ScreenRow("Tích hợp PMS/Tra cứu Hợp đồng", 3.0),
+            ScreenRow("Lập/Phê duyệt/Tra cứu Báo cáo Thẩm định", 5.0),
+        ])]),
+        SubSystem("5. Thống kê, Báo cáo, Quản trị", features=[Feature("5.1 Operation reporting and admin", screens=[
+            ScreenRow("Thống kê tài liệu AI/Q&A/sử dụng", 3.0),
+            ScreenRow("Báo cáo ủy quyền/hợp đồng/pháp lý/thẩm định", 4.0),
+            ScreenRow("Phân quyền, danh mục, cấu hình, đánh giá hài lòng", 4.0),
+        ])]),
+    ])]
+    return QuotationInput(
+        project_name=project_name,
+        hang_mucs=hang_mucs,
+        out_of_screen=[
+            OutOfScreenItem("Thiết lập dự án & DevOps", 4.0),
+            OutOfScreenItem("Thiết kế dữ liệu, taxonomy pháp lý và migration template", 5.0),
+            OutOfScreenItem("Hỗ trợ tích hợp eOffice/PMS/AI Provider", 6.0),
+            OutOfScreenItem("Tài liệu hóa & đào tạo", 5.0),
+            OutOfScreenItem("Triển khai, UAT & Go-live", 5.0),
+            OutOfScreenItem("Bảo hành/hypercare 12 tháng", 6.0),
+        ],
+        assumptions=[
+            Assumption("Phạm vi", "AI API GPT/Azure OpenAI/Gemini là chi phí thuê dịch vụ riêng nếu khách hàng chưa có bản quyền."),
+            Assumption("Kỹ thuật", "Tích hợp eOffice/PMS/e-sign phụ thuộc API contract, môi trường test và owner xác nhận."),
+            Assumption("Dữ liệu", "Khách hàng cung cấp FAQ, tài liệu ban hành, biểu mẫu ủy quyền/hợp đồng/thẩm định và taxonomy lĩnh vực/nghiệp vụ."),
+            Assumption("Phạm vi", "AI trả lời phải có trích dẫn nguồn; câu hỏi không đủ dữ liệu chuyển B.PCTT/human review."),
+        ],
+        platform="web", risk_level="detailed", manday_rate_vnd=MANDAY_RATE_VND,
+    )
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_quotation_xlsx(inp: QuotationInput, out_path: Path) -> Path:
@@ -519,11 +571,21 @@ def generate_quotation_xlsx(inp: QuotationInput, out_path: Path) -> Path:
 
 
 def generate_quotation_for_project(project, out_path: Path | None = None) -> Path:
-    """Wrapper dùng trong generate_ba / generate_ba_from_sources."""
-    inp = default_quotation_input(
-        project_name=project.config.project_slug,
-        customer=project.config.customer,
-    )
+    """Wrapper used by BA generators with lightweight domain routing."""
+    project_name = getattr(project.config, "product", None) or getattr(project.config, "project_slug", project.root.name)
+    customer = getattr(project.config, "customer", "")
+    source_text = ""
+    try:
+        for source_path in sorted((project.root / "source" / "redacted").glob("*")):
+            if source_path.is_file():
+                source_text += "\n" + source_path.read_text(encoding="utf-8", errors="ignore")[:10000]
+    except Exception:
+        source_text = ""
+    haystack = f"{project_name} {customer} {project.root.name} {source_text}".lower()
+    if any(k in haystack for k in ["legaliq", "pháp lý", "phap ly", "ủy quyền", "uy quyen", "hợp đồng", "hop dong", "b.pctt"]):
+        inp = legal_quotation_input(project_name=project_name, customer=customer)
+    else:
+        inp = default_quotation_input(project_name=project_name, customer=customer)
     inp.manday_rate_vnd = getattr(project.config, "manday_rate_vnd", MANDAY_RATE_VND)
     if out_path is None:
         out_path = project.root / "artifacts" / "ba" / "06-quotation.xlsx"

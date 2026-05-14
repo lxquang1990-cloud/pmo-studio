@@ -51,9 +51,209 @@ def read_redacted_sources(project: Project, max_chars: int = 80000) -> str:
     return text[:max_chars]
 
 
+
+def _is_legal_project(project: Project, source_text: str) -> bool:
+    haystack = " ".join([
+        str(getattr(project.config, "slug", project.root.name)),
+        str(getattr(project.config, "product", "")),
+        str(getattr(project.config, "customer", "")),
+        str(getattr(project.config, "brief", "")),
+        source_text,
+    ]).lower()
+    return any(k in haystack for k in ["legaliq", "pháp lý", "phap ly", "ủy quyền", "uy quyen", "hợp đồng", "hop dong", "b.pctt"])
+
+def generate_legal_ba_from_sources(project: Project, source_text: str) -> None:
+    """Source-driven LegalIQ BA baseline used when generic projects are legal-domain.
+
+    This prevents Stage21 Asset Management demo hardening from leaking into new projects.
+    """
+    ba_dir = project.root / "artifacts" / "ba"
+    srs_dir = ba_dir / "03-srs"
+    us_dir = ba_dir / "04-us"
+    for d in [ba_dir, srs_dir, srs_dir / "screens", srs_dir / "apis", srs_dir / "workflows", srs_dir / "reports", us_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+    req_defs = """| REQ ID | Definition |
+|---|---|
+| REQ-CORE-001 | Legal Q&A portal: giao diện hỏi đáp pháp lý/nghiệp vụ, FAQ theo lĩnh vực, câu hỏi yêu thích, thông báo/tài liệu mới. |
+| REQ-CORE-002 | AI legal answer engine: trả lời tự động có trích dẫn nguồn từ FAQ/tài liệu nội bộ, gợi ý lĩnh vực khi câu hỏi chưa rõ, chuyển B.PCTT khi AI không đủ dữ liệu. |
+| REQ-CORE-003 | Delegation management: soạn thảo, phê duyệt, ban hành, tra cứu, đồng bộ ủy quyền và AI kiểm tra phạm vi phân cấp/ủy quyền. |
+| REQ-CORE-004 | Contract legal review: soạn thảo hợp đồng theo mẫu, rà soát/phê duyệt, AI review, ký duyệt/eOffice/e-sign, tích hợp PMS và tra cứu hợp đồng. |
+| REQ-CORE-005 | Appraisal/report/admin: lập/phê duyệt/tra cứu báo cáo thẩm định, thống kê AI/Q&A/usage, báo cáo pháp lý, quản trị RBAC/danh mục/cấu hình. |"""
+    ac_defs = """| AC ID | Definition |
+|---|---|
+| AC-001-01 | User có thể xem FAQ, lọc theo phân loại/lĩnh vực và gửi câu hỏi yêu cầu giải đáp. |
+| AC-001-02 | AI trả lời có trích dẫn nguồn; khi không đủ dữ liệu thì chuyển câu hỏi đến B.PCTT/user phụ trách và ghi nhận toàn bộ quá trình. |
+| AC-001-03 | Ủy quyền được soạn theo mẫu, phê duyệt/ký trên eOffice, cấp số/ban hành và đồng bộ tài liệu ban hành. |
+| AC-001-04 | AI kiểm tra ủy quyền cảnh báo điểm không phù hợp theo phạm vi phân cấp và lịch sử ủy quyền. |
+| AC-001-05 | Hợp đồng được soạn từ mẫu, rà soát pháp lý, phê duyệt/ký duyệt, xuất file hoàn thiện và đồng bộ PMS khi cần. |
+| AC-001-06 | Báo cáo thẩm định có checklist hồ sơ, trích xuất dữ liệu PMS, phê duyệt và tra cứu theo loại thẩm định. |
+| AC-001-07 | Báo cáo/thống kê tổng hợp Q&A, tài liệu AI, sử dụng hệ thống, ủy quyền, hợp đồng và pháp lý khác. |
+| AC-001-08 | RBAC chặn truy cập trái quyền, cấu hình danh mục/lĩnh vực/biểu mẫu và ghi audit log. |"""
+    summary = """- Nguồn: yêu cầu kỹ thuật LIQ LegalIQ.
+- Phân hệ chính: Hỏi & Đáp Pháp lý, Quản lý Ủy quyền, Soạn thảo/rà soát/phê duyệt Hợp đồng, Thẩm định, Thống kê, Báo cáo, Quản trị & Phân quyền.
+- Tích hợp: eOffice quản lý tài liệu ban hành, eOffice trình ký/quản lý văn bản, PMS, AI API GPT/Azure OpenAI/Gemini, ký hợp đồng điện tử."""
+    prd = f"""# PRD: LIQ LegalIQ - Phần mềm Hỏi đáp Pháp lý
+
+## Overview
+LIQ LegalIQ là web app phục vụ hỏi đáp pháp lý/nghiệp vụ nội bộ, quản lý FAQ, AI trả lời tự động có trích dẫn nguồn, quản lý ủy quyền, soạn thảo/rà soát/phê duyệt hợp đồng, thẩm định, thống kê/báo cáo và quản trị phân quyền.
+
+## Source Intelligence Summary
+{summary}
+
+## Personas / Stakeholders
+- Người dùng nội bộ: hỏi đáp pháp lý/nghiệp vụ, xem FAQ/tài liệu mới.
+- B.PCTT / Legal Officer: tiếp nhận, phân công, trả lời, rà soát pháp lý.
+- User phụ trách lĩnh vực/nghiệp vụ: trả lời câu hỏi theo phân công.
+- Văn thư: cấp số, ban hành ủy quyền/văn bản.
+- Lãnh đạo/Approver: kiểm tra, phê duyệt, ký duyệt.
+- Admin: quản trị danh mục, biểu mẫu, phân quyền, cấu hình AI.
+
+## Product Modules
+- Legal Q&A portal + FAQ catalog.
+- AI legal answer engine and AI training admin.
+- Delegation/authorization management.
+- Contract drafting, legal review and approval.
+- Appraisal workflow.
+- Statistics, reports, admin/RBAC.
+
+## Business Goals
+- BG-001: Chuẩn hóa kênh hỏi đáp pháp lý/nghiệp vụ và giảm tải trả lời thủ công.
+- BG-002: Tăng tốc tra cứu/soạn thảo/rà soát ủy quyền, hợp đồng và hồ sơ thẩm định.
+- BG-003: Tăng traceability bằng nguồn trích dẫn, lịch sử xử lý, phân quyền và báo cáo vận hành.
+
+## Scope
+### MVP
+- Hỏi đáp pháp lý, FAQ, câu hỏi yêu thích, thông báo/tài liệu mới.
+- AI trả lời theo lĩnh vực/nghiệp vụ, trích dẫn nguồn, chuyển tuyến B.PCTT khi không đủ dữ liệu.
+- Quản lý ủy quyền: soạn, phê duyệt, ban hành, tra cứu, đồng bộ.
+- Hợp đồng: soạn từ mẫu, rà soát/phê duyệt, AI hỗ trợ review, xuất file, tích hợp ký/eOffice ở mức cấu hình.
+- Thẩm định, thống kê/báo cáo, quản trị phân quyền/danh mục/cấu hình.
+
+### Phase 2 / Optional
+- Tích hợp sâu chữ ký điện tử với đối tác/nhà thầu.
+- AI nâng cao cho dự báo điểm không phù hợp, fine-tuning chuyên sâu.
+- Tích hợp realtime với các ứng dụng khác ngoài eOffice/PMS khi có API contract.
+
+## Requirements Baseline
+{req_defs}
+
+## Acceptance Baseline
+{ac_defs}
+
+## Implementation Readiness
+- API baseline: API-CORE-001.
+- Workflow baseline: WF-CORE-001.
+- Screen baseline: SCR-CORE-001.
+- Test baseline: TC-001..TC-008.
+"""
+    brd = f"""# BRD: LIQ LegalIQ
+
+## Business Context
+PVCFC / Legal Department cần hệ thống web app LegalIQ để số hóa kênh hỏi đáp pháp lý, quản lý ủy quyền, rà soát hợp đồng, thẩm định và báo cáo pháp lý; đồng thời tận dụng AI trả lời tự động dựa trên FAQ/tài liệu nội bộ có trích dẫn nguồn.
+
+## Business Drivers
+- Nhu cầu hỏi đáp pháp lý/nghiệp vụ lặp lại cao, cần giảm tải B.PCTT.
+- Cần quản lý vòng đời câu hỏi từ người dùng → AI → B.PCTT/user phụ trách → phản hồi → thống kê.
+- Cần số hóa quy trình ủy quyền, hợp đồng và thẩm định có tích hợp eOffice/PMS.
+
+## Business Requirements
+| BR ID | Requirement | Priority | Evidence |
+|---|---|---|---|
+| BR-CORE-001 | Quản lý Hỏi & Đáp Pháp lý, FAQ, câu hỏi yêu thích, thông báo/tài liệu mới | P0 | SRC-001 |
+| BR-CORE-002 | AI trả lời tự động có trích dẫn nguồn và chuyển tuyến khi chưa đủ dữ liệu | P0 | SRC-001 |
+| BR-CORE-003 | Quản lý ủy quyền từ soạn thảo đến ban hành/đồng bộ/AI kiểm tra | P0 | SRC-001 |
+| BR-CORE-004 | Soạn thảo, rà soát pháp lý, phê duyệt và tra cứu hợp đồng | P0 | SRC-001 |
+| BR-CORE-005 | Thẩm định, thống kê, báo cáo, quản trị RBAC/danh mục/cấu hình | P1 | SRC-001 |
+
+## Requirement Definitions
+{req_defs}
+
+## Acceptance Definitions
+{ac_defs}
+
+## Key Workflows
+| Workflow | Trigger | Main Steps | Output |
+|---|---|---|---|
+| WF-CORE-001 Legal Q&A | User mở hỏi đáp | Chọn lĩnh vực/câu hỏi mẫu hoặc nhập câu hỏi → AI xử lý/trích dẫn → chuyển B.PCTT nếu chưa thỏa mãn | Câu trả lời, nguồn trích dẫn, lịch sử xử lý |
+| WF-CORE-002 Delegation | User lập ủy quyền | Soạn theo mẫu → kiểm tra/phê duyệt/ký eOffice → văn thư cấp số/ban hành → đồng bộ tài liệu | Hồ sơ ủy quyền hợp lệ |
+| WF-CORE-003 Contract review | User soạn hợp đồng | Chọn mẫu/nhập thông tin → AI hỗ trợ rà soát → phê duyệt/ký → xuất file/đồng bộ PMS | Hợp đồng hoàn thiện |
+
+## Implementation Readiness
+- API baseline: API-CORE-001.
+- Workflow baseline: WF-CORE-001.
+- Screen baseline: SCR-CORE-001.
+- Test baseline: TC-001..TC-008.
+"""
+    srs = f"""# SRS: LIQ LegalIQ
+
+## 1. Introduction
+SRS mô tả yêu cầu chức năng, phi chức năng và traceability cho hệ thống LIQ LegalIQ.
+
+## 2. Product Overview
+Web app phục vụ hỏi đáp pháp lý bằng FAQ/AI, quản lý ủy quyền, hợp đồng, thẩm định, thống kê/báo cáo và quản trị.
+
+## 3. Functional Requirements
+{req_defs}
+
+## 4. Acceptance Criteria
+{ac_defs}
+
+## 5. External Interfaces
+- eOffice Document: lấy tài liệu ban hành/nội dung đính kèm để huấn luyện AI.
+- eOffice Signing/Workflow: trình ký/phê duyệt ủy quyền, hợp đồng.
+- PMS: đồng bộ hợp đồng, trích xuất thông tin báo cáo thẩm định.
+- AI Provider: GPT/Azure OpenAI/Gemini API.
+
+## 6. Non-functional Requirements
+- Bảo mật RBAC theo vai trò, audit log đầy đủ.
+- AI answer phải có source citation khi dùng dữ liệu nội bộ.
+- Lưu lịch sử câu hỏi/trả lời/phân công/SLA.
+"""
+    (ba_dir / "01-prd.md").write_text(prd, encoding="utf-8")
+    (ba_dir / "02-brd.md").write_text(brd, encoding="utf-8")
+    (srs_dir / "srs.md").write_text(srs, encoding="utf-8")
+    (srs_dir / "screens" / "SCR-CORE-001.md").write_text("# SCR-CORE-001: LegalIQ Workspace\n\n**Linked REQ:** REQ-CORE-001\n\nScreens: Q&A portal, FAQ admin, AI training, delegation, contract, appraisal, reports, admin/RBAC.\n", encoding="utf-8")
+    (srs_dir / "apis" / "API-CORE-001.md").write_text("# API-CORE-001: LegalIQ API\n\n**Linked REQ:** REQ-CORE-002\n\nEndpoints for questions, AI answers, FAQ, delegation, contracts, appraisal, reports, RBAC and integrations.\n", encoding="utf-8")
+    (srs_dir / "workflows" / "WF-CORE-001.md").write_text("# WF-CORE-001: LegalIQ Workflow\n\n**Linked REQ:** REQ-CORE-003\n\nUser question → AI answer/citation → B.PCTT escalation → assignment → legal response → reporting.\n", encoding="utf-8")
+    (us_dir / "US-001.md").write_text(f"""# User Story US-001: Hỏi đáp pháp lý bằng AI có trích dẫn nguồn
+
+**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005
+**Linked Work Items:** SCR-CORE-001, API-CORE-001, WF-CORE-001
+
+As a user nội bộ, I want hỏi đáp pháp lý/nghiệp vụ qua FAQ/AI và chuyển B.PCTT khi cần so that tôi nhận được câu trả lời đúng nguồn, đúng người phụ trách và có lịch sử xử lý.
+
+## Acceptance Criteria
+{ac_defs}
+""", encoding="utf-8")
+    (ba_dir / "05-test-cases.md").write_text(f"""# Test Cases
+
+## Referenced Requirements
+{req_defs}
+
+## Canonical Acceptance Definitions
+{ac_defs}
+
+## Coverage Matrix
+| ID | Linked AC | Type | Steps / Input | Expected Result |
+|---|---|---|---|---|
+| TC-001 | AC-001-01 | Positive | User lọc FAQ theo lĩnh vực pháp lý và gửi câu hỏi | FAQ hiển thị đúng, câu hỏi được ghi nhận |
+| TC-002 | AC-001-02 | AI/Fallback | User hỏi câu chưa có FAQ đủ dữ liệu | AI gợi ý/trả lời có trích dẫn hoặc chuyển B.PCTT |
+| TC-003 | AC-001-03 | Workflow | Soạn ủy quyền theo mẫu và trình ký eOffice | Ủy quyền được phê duyệt/ban hành/đồng bộ |
+| TC-004 | AC-001-04 | AI validation | AI kiểm tra ủy quyền vượt phạm vi phân cấp | Hệ thống cảnh báo điểm không phù hợp |
+| TC-005 | AC-001-05 | Contract | Soạn hợp đồng từ mẫu và rà soát pháp lý | Hợp đồng được review/phê duyệt/xuất file |
+| TC-006 | AC-001-06 | Appraisal | Lập báo cáo thẩm định từ checklist/PMS | Báo cáo được trình phê duyệt và tra cứu |
+| TC-007 | AC-001-07 | Report | Xuất thống kê Q&A/usage/ủy quyền/hợp đồng | File báo cáo đúng bộ lọc và số liệu |
+| TC-008 | AC-001-08 | Permission | User trái quyền truy cập admin/RBAC | Trả 403/access denied và ghi audit log |
+""", encoding="utf-8")
+    from pmo_studio.generators.quotation import generate_quotation_for_project
+    generate_quotation_for_project(project, ba_dir / "06-quotation.xlsx")
+    project.mark_stage("ba.source_driven", "completed")
+
 def generate_ba_from_sources(project: Project, llm: LLMClient | None = None) -> None:
     llm = llm or NoopLLMClient()
     source_text = read_redacted_sources(project)
+    if _is_legal_project(project, source_text):
+        return generate_legal_ba_from_sources(project, source_text)
     allocator = IdAllocator.from_state(project.state.id_counters)
     br = allocator.issue("BR", "CORE")
     req = allocator.issue("REQ", "CORE")

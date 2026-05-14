@@ -9,7 +9,102 @@ from pmo_studio.core.project import Project
 from pmo_studio.domain.prompts import get_domain
 
 
+
+def _is_legal_project(project: Project) -> bool:
+    source_text = ""
+    try:
+        for source_path in sorted((project.root / "source" / "redacted").glob("*")):
+            if source_path.is_file():
+                source_text += "\n" + source_path.read_text(encoding="utf-8", errors="ignore")[:10000]
+    except Exception:
+        source_text = ""
+    haystack = " ".join([
+        str(getattr(project.config, "project_slug", project.root.name)),
+        str(getattr(project.config, "product", "")),
+        str(getattr(project.config, "customer", "")),
+        str(getattr(project.config, "brief", "")),
+        source_text,
+    ]).lower()
+    return any(k in haystack for k in ["legaliq", "pháp lý", "phap ly", "ủy quyền", "uy quyen", "hợp đồng", "hop dong", "b.pctt"])
+
+def generate_legal_po(project: Project) -> None:
+    d = project.root / "artifacts/po"; d.mkdir(parents=True, exist_ok=True)
+    (d / "01-vision.md").write_text("""# Product Vision
+
+## Domain: Legal AI / LegalIQ
+
+## Vision Statement
+Triển khai LIQ LegalIQ để số hóa hỏi đáp pháp lý, quản lý FAQ/câu hỏi, AI trả lời có trích dẫn nguồn, quản lý ủy quyền, hợp đồng, thẩm định và báo cáo pháp lý.
+
+## MVP Boundaries
+- Included: Q&A/FAQ, AI answer/citation, B.PCTT escalation, delegation, contract review, appraisal, reports, RBAC/admin.
+- Phase 2: AI fine-tuning nâng cao, e-sign với đối tác, realtime integration sâu.
+- Excluded: cam kết pháp lý của chữ ký điện tử nếu chưa có provider/license và chính sách nội bộ.
+
+## Business Goals
+- BG-001: Giảm thời gian trả lời câu hỏi pháp lý/nghiệp vụ phổ biến.
+- BG-002: Chuẩn hóa ủy quyền, hợp đồng, thẩm định và báo cáo.
+- BG-003: Tăng auditability và traceability qua trích dẫn nguồn/lịch sử xử lý.
+
+## Implementation Readiness
+- API baseline: API-CORE-001 for Q&A, AI answer, delegation, contract, appraisal, report and RBAC integration.
+- Workflow baseline: WF-CORE-001 links legal question, AI answer/citation, B.PCTT escalation, approval and reporting.
+- Screen baseline: SCR-CORE-001 covers LegalIQ workspace screens.
+- Test baseline: TC-001..TC-008 cover acceptance criteria AC-001-01..AC-001-08.
+""", encoding="utf-8")
+    (d / "02-okr.md").write_text("# OKR Set\n\n| Objective | Key Result |\n|---|---|\n| Tăng hiệu quả hỏi đáp pháp lý | 80% câu hỏi phổ biến được trả lời bằng FAQ/AI có trích dẫn |\n", encoding="utf-8")
+    (d / "03-roadmap.md").write_text("# Roadmap\n\n## Now\nLegal Q&A, FAQ, AI citation, B.PCTT escalation.\n\n## Next\nDelegation, contract review, appraisal.\n\n## Later\nAdvanced AI/e-sign/realtime integration.\n", encoding="utf-8")
+    wb = Workbook(); ws = wb.active; ws.title = "Backlog"; ws.append(["Epic", "Feature", "Priority"])
+    for row in [("Legal Q&A", "FAQ/Q&A portal", "P0"), ("AI", "AI answer with citation and escalation", "P0"), ("Delegation", "Authorization workflow", "P0"), ("Contract", "Contract drafting/review/approval", "P0"), ("Appraisal", "Appraisal report workflow", "P1"), ("Reports", "Statistics and legal reports", "P1"), ("Admin", "RBAC/catalog/config", "P0")]:
+        ws.append(row)
+    wb.save(d / "04-backlog.xlsx")
+    (d / "05-release-notes.md").write_text("# Release Notes\n\n## v0.1\nInitial LegalIQ PMO pack.\n", encoding="utf-8")
+    project.mark_stage("po", "completed")
+
+def generate_legal_pm(project: Project) -> None:
+    d = project.root / "artifacts/pm"; d.mkdir(parents=True, exist_ok=True)
+    (d / "01-charter.md").write_text("""# Project Charter
+
+## Domain
+Legal AI / LegalIQ
+
+## Objective
+Triển khai web app LIQ LegalIQ, bao gồm hỏi đáp pháp lý bằng AI, quản lý ủy quyền, hợp đồng, thẩm định, thống kê/báo cáo và quản trị phân quyền.
+
+## MVP Scope
+- BR-CORE-001: Legal Q&A portal và FAQ.
+- BR-CORE-002: AI answer engine có trích dẫn và escalation.
+- BR-CORE-003: Delegation management.
+- BR-CORE-004: Contract legal review.
+- BR-CORE-005: Appraisal, reports, admin/RBAC.
+
+## Implementation Readiness
+- API baseline: API-CORE-001 for Q&A, AI answer, delegation, contract, appraisal, report and RBAC integration.
+- Workflow baseline: WF-CORE-001 links legal question, AI answer/citation, B.PCTT escalation, approval and reporting.
+- Screen baseline: SCR-CORE-001 covers LegalIQ workspace screens.
+- Test baseline: TC-001..TC-008 cover acceptance criteria AC-001-01..AC-001-08.
+
+## Risks
+| Risk ID | Description | Mitigation |
+|---|---|---|
+| RISK-001 | Chất lượng dữ liệu huấn luyện AI chưa đủ | Data cleansing, source citation, fallback B.PCTT |
+| RISK-002 | API eOffice/PMS chưa rõ | Baseline API contract trước integration sprint |
+| RISK-003 | AI trả lời sai/ngụy tạo | Bắt buộc citation, confidence threshold, human escalation |
+""", encoding="utf-8")
+    # Keep the existing XLSX/MD support files simple but domain-relevant.
+    wb = Workbook(); ws = wb.active; ws.title = "WBS"; ws.append(["Phase", "Work Package", "Owner"])
+    for row in [("Discovery", "Legal taxonomy + FAQ/data readiness", "BA/Legal"), ("Build", "Q&A/AI/Delegation/Contract/Appraisal", "Dev"), ("UAT", "Legal scenarios and integration test", "QA/Legal")]: ws.append(row)
+    wb.save(d / "02-wbs.xlsx")
+    wb = Workbook(); ws = wb.active; ws.title = "RACI"; ws.append(["Activity", "Legal", "IT", "Vendor", "Sponsor"]); ws.append(["Scope baseline", "R", "C", "C", "A"]); ws.append(["Integration", "C", "A", "R", "I"]); wb.save(d / "03-raci.xlsx")
+    wb = Workbook(); ws = wb.active; ws.title = "Risks"; ws.append(["Risk", "Impact", "Mitigation"]); ws.append(["AI hallucination", "High", "Citation + human escalation"]); ws.append(["Integration API unavailable", "High", "Import/export fallback"]); wb.save(d / "04-risk-register.xlsx")
+    (d / "05-status-report.md").write_text("# Status Report\n\nLegalIQ PMO pack generated.\n", encoding="utf-8")
+    (d / "06-change-request-template.md").write_text("# Change Request Template\n", encoding="utf-8")
+    (d / "07-lessons-learned.md").write_text("# Lessons Learned\n", encoding="utf-8")
+    project.mark_stage("pm", "completed")
+
 def generate_po(project: Project) -> None:
+    if _is_legal_project(project):
+        return generate_legal_po(project)
     domain = get_domain(project.config.domain_pack)
     d = project.root / "artifacts/po"
     d.mkdir(parents=True, exist_ok=True)
@@ -77,6 +172,8 @@ def _project_context(project_root: Path) -> dict:
 
 
 def generate_pm(project: Project) -> None:
+    if _is_legal_project(project):
+        return generate_legal_pm(project)
     domain = get_domain(project.config.domain_pack)
     d = project.root / "artifacts/pm"
     d.mkdir(parents=True, exist_ok=True)
