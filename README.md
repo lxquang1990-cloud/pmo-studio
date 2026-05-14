@@ -329,6 +329,25 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.1 Web UI hardening
+
+The local Web UI now includes a project detail dashboard, source file upload, run status JSON, clearer error pages, safer non-local bind warning, and a download center.
+
+```bash
+pmo web --root ~/pmo-projects --host 127.0.0.1 --port 8765
+```
+
+Routes:
+
+```text
+/                 project list + run form
+/project/<slug>   project detail, quality, traceability, downloads
+/status?slug=...  web run status JSON
+/download?path=... safe root-bounded artifact download
+```
+
+Supported source input: pasted text or uploaded `.md`, `.txt`, `.docx`, `.pdf` files. The server remains local-first; when binding a non-local host it prints a warning to use Tailscale/auth reverse proxy.
+
 ## v2.0 local Web UI MVP
 
 Run the local-first Web UI:
