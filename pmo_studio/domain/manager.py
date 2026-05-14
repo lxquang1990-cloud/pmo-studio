@@ -72,6 +72,65 @@ def scaffold_domain(domain_id: str, label: str, force: bool = False) -> Path:
     return path
 
 
+def update_domain(domain_id: str, updates: dict[str, Any]) -> Path:
+    path = PACK_DIR / f"{domain_id}.yaml"
+    if not path.exists():
+        raise FileNotFoundError(f"Domain pack not found: {domain_id}")
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    for key, value in updates.items():
+        if key not in REQUIRED_V2 and key != "quotation_defaults":
+            raise ValueError(f"Unsupported domain field: {key}")
+        if isinstance(data.get(key), list):
+            data[key] = _merge_list(data.get(key) or [], _coerce_list(value))
+        elif isinstance(data.get(key), dict):
+            if not isinstance(value, dict):
+                raise ValueError(f"Field {key} expects JSON object")
+            merged = dict(data.get(key) or {}); merged.update(value); data[key] = merged
+        else:
+            data[key] = value
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return path
+
+
+def export_domain(domain_id: str, out_dir: Path) -> Path:
+    src = PACK_DIR / f"{domain_id}.yaml"
+    if not src.exists():
+        raise FileNotFoundError(f"Domain pack not found: {domain_id}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / src.name
+    dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    return dest
+
+
+def import_domain(path: Path, force: bool = False) -> Path:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    domain_id = str(data.get("id") or path.stem)
+    dest = PACK_DIR / f"{domain_id}.yaml"
+    if dest.exists() and not force:
+        raise FileExistsError(f"Domain pack exists: {dest}")
+    missing = [k for k in REQUIRED_V2 if k not in data or data.get(k) in (None, [], {})]
+    if missing:
+        raise ValueError(f"Invalid domain pack {domain_id}; missing: {', '.join(missing)}")
+    dest.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    return dest
+
+
+def _merge_list(existing: list[Any], additions: list[Any]) -> list[Any]:
+    out = list(existing)
+    for item in additions:
+        if item not in out:
+            out.append(item)
+    return out
+
+
+def _coerce_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [x.strip() for x in value.split(",") if x.strip()]
+    return [value]
+
+
 def benchmark_domain(domain_id: str) -> dict[str, Any]:
     pack = load_domain_pack(domain_id)
     source = "\n".join([pack.label, " ".join(pack.keywords), "\n".join(pack.modules), "\n".join(pack.workflows)])

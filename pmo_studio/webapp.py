@@ -23,6 +23,7 @@ from pmo_studio.core.lifecycle import summarize_project
 from pmo_studio.core.project import DEFAULT_ROOT, Project
 from pmo_studio.core.registry import list_projects, refresh_registry
 from pmo_studio.integrations.telegram_workflow import build_delivery_manifest
+from pmo_studio.domain.manager import export_domain, import_domain, inspect_domain, list_domains, scaffold_domain, update_domain, validate_domain
 
 
 @dataclass
@@ -53,12 +54,20 @@ def run_web(root: Path = DEFAULT_ROOT, host: str = "127.0.0.1", port: int = 8765
                 self._project(root, urllib.parse.unquote(parsed.path.removeprefix("/project/")))
             elif parsed.path == "/download":
                 self._download(root, qs.get("path", [""])[0])
+            elif parsed.path == "/domains":
+                self._domains(root, qs.get("selected", [""])[0])
             elif parsed.path == "/status":
                 self._status(root, qs.get("slug", [""])[0])
             else:
                 self.send_error(404)
 
         def do_POST(self):
+            if self.path == "/domains/scaffold":
+                self._domain_scaffold(root); return
+            if self.path == "/domains/update":
+                self._domain_update(root); return
+            if self.path == "/domains/import":
+                self._domain_import(root); return
             if self.path != "/run":
                 self.send_error(404); return
             try:
@@ -93,7 +102,7 @@ def run_web(root: Path = DEFAULT_ROOT, host: str = "127.0.0.1", port: int = 8765
                 status = _read_status(root, p.slug).get("status", "")
                 rows.append(f"<tr><td><a href='/project/{urllib.parse.quote(p.slug)}'>{html.escape(p.slug)}</a></td><td>{html.escape(p.customer)}</td><td>{html.escape(p.lifecycle_state)}</td><td>{html.escape(status)}</td><td>{html.escape(p.updated_at)}</td></tr>")
             body = f"""
-<h1>PMO Studio Web UI</h1>
+<h1>PMO Studio Web UI</h1><p><a href='/domains'>Domain Pack Studio</a></p>
 <p class='muted'>Local-first PMO documentation operating system. Default LLM mode: noop/offline.</p>
 <form method='post' action='/run' enctype='multipart/form-data'>
   <p><label>Slug<br><input name='slug' required></label></p>
@@ -132,6 +141,56 @@ def run_web(root: Path = DEFAULT_ROOT, host: str = "127.0.0.1", port: int = 8765
 <h2>Project root</h2><pre>{html.escape(str(project.root))}</pre>
 """
             self._html(body)
+
+        def _domains(self, root: Path, selected: str = ""):
+            rows = []
+            for row in list_domains():
+                did = row['id']
+                rows.append(f"<tr><td><a href='/domains?selected={urllib.parse.quote(did)}'>{html.escape(did)}</a></td><td>{html.escape(row['label'])}</td><td>{row['pack_version']}</td><td>{row['keywords']}</td><td>{row['modules']}</td></tr>")
+            detail = ""
+            if selected:
+                try:
+                    data = inspect_domain(selected)
+                    validation = validate_domain(selected)
+                    export_path = export_domain(selected, root / '_domain_exports')
+                    detail = f"""<h2>Inspect: {html.escape(selected)}</h2>
+<p>Validation: <b>{'PASS' if validation['passed'] else 'FAIL'}</b> | <a href='/download?path={urllib.parse.quote(str(export_path))}'>Export YAML</a></p>
+<pre>{html.escape(json.dumps(data, ensure_ascii=False, indent=2))}</pre>
+<h3>Append field values</h3>
+<form method='post' action='/domains/update'>
+<input type='hidden' name='domain_id' value='{html.escape(selected)}'>
+<p><label>Field<br><select name='field'><option>keywords</option><option>modules</option><option>workflows</option><option>reports</option><option>integrations</option><option>risk_factors</option><option>acceptance_presets</option></select></label></p>
+<p><label>Values (comma-separated)<br><input name='values'></label></p>
+<p><button type='submit'>Append</button></p>
+</form>"""
+                except Exception as exc:
+                    detail = _error_page(exc, selected)
+            body = f"""<p><a href='/'>← Projects</a></p><h1>Domain Pack Studio</h1>
+<h2>Scaffold domain</h2><form method='post' action='/domains/scaffold'><p><label>ID<br><input name='domain_id' required></label></p><p><label>Label<br><input name='label' required></label></p><p><label><input type='checkbox' name='force' value='1'> overwrite</label></p><p><button type='submit'>Scaffold</button></p></form>
+<h2>Import YAML</h2><form method='post' action='/domains/import' enctype='multipart/form-data'><p><input type='file' name='domain_file' required></p><p><label><input type='checkbox' name='force' value='1'> overwrite</label></p><p><button type='submit'>Import</button></p></form>
+<h2>Domain packs</h2><table><tr><th>ID</th><th>Label</th><th>Version</th><th>Keywords</th><th>Modules</th></tr>{''.join(rows)}</table>{detail}"""
+            self._html(body)
+
+        def _domain_scaffold(self, root: Path):
+            data, _ = _parse_post(self)
+            scaffold_domain(_slug(data.get('domain_id', '')), data.get('label', ''), force=data.get('force') == '1')
+            self.send_response(303); self.send_header('Location', '/domains'); self.end_headers()
+
+        def _domain_update(self, root: Path):
+            data, _ = _parse_post(self)
+            domain_id = data.get('domain_id', '')
+            update_domain(domain_id, {data.get('field', ''): data.get('values', '')})
+            self.send_response(303); self.send_header('Location', f"/domains?selected={urllib.parse.quote(domain_id)}"); self.end_headers()
+
+        def _domain_import(self, root: Path):
+            data, files = _parse_post(self)
+            upload = files.get('domain_file')
+            if not upload:
+                self._html('<h1>Missing domain file</h1>', 400); return
+            src = root / '_domain_imports' / Path(upload[0]).name
+            src.parent.mkdir(parents=True, exist_ok=True); src.write_bytes(upload[1])
+            dest = import_domain(src, force=data.get('force') == '1')
+            self.send_response(303); self.send_header('Location', f"/domains?selected={urllib.parse.quote(dest.stem)}"); self.end_headers()
 
         def _status(self, root: Path, slug: str):
             data = json.dumps(_read_status(root, slug), ensure_ascii=False, indent=2).encode("utf-8")

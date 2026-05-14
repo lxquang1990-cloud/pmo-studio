@@ -329,6 +329,27 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.2 Domain Pack Studio
+
+Domain Pack Studio adds UI and CLI support for domain pack lifecycle management.
+
+Web UI:
+
+```text
+/domains                    list/scaffold/import domain packs
+/domains?selected=crm       inspect, validate, export YAML, append field values
+```
+
+CLI additions:
+
+```bash
+pmo domains update crm keywords "renewal, upsell"
+pmo domains export crm --out-dir ./domain-exports
+pmo domains import ./banking.yaml --force
+```
+
+Supported managed fields: keywords, modules, workflows, reports, integrations, risk_factors, acceptance_presets, quotation_defaults.
+
 ## v2.1 Web UI hardening
 
 The local Web UI now includes a project detail dashboard, source file upload, run status JSON, clearer error pages, safer non-local bind warning, and a download center.

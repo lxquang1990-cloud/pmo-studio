@@ -37,7 +37,7 @@ from pmo_studio.core.signoff import update_signoff, load_signoff
 from pmo_studio.generators.source_ba import read_redacted_sources
 from pmo_studio.core.artifact_manifest import write_artifact_manifest
 from pmo_studio.templates.governance import list_versioned_templates, validate_templates
-from pmo_studio.domain.manager import list_domains, inspect_domain, validate_domain, scaffold_domain, benchmark_domain
+from pmo_studio.domain.manager import list_domains, inspect_domain, validate_domain, scaffold_domain, benchmark_domain, update_domain, export_domain, import_domain
 from pmo_studio.integrations.telegram_workflow import build_delivery_manifest
 
 DEFAULT_LLM_PROVIDER = "auto"
@@ -469,6 +469,15 @@ def cmd_domains(args):
         print(result['explanation'])
         if not result['passed']:
             raise SystemExit(1)
+    elif args.action == "update":
+        out = update_domain(args.domain_id, {args.field: args.values})
+        print(f"Domain updated: {out}")
+    elif args.action == "export":
+        out = export_domain(args.domain_id, Path(args.out_dir))
+        print(f"Domain exported: {out}")
+    elif args.action == "import":
+        out = import_domain(Path(args.path), force=args.force)
+        print(f"Domain imported: {out}")
 
 def cmd_eval(args):
     eval_root = Path(args.root) / "eval-runs"
@@ -648,6 +657,9 @@ def build_parser():
     dval = dom_sub.add_parser("validate"); dval.add_argument("domain_id", nargs="?"); dval.set_defaults(func=cmd_domains)
     dsc = dom_sub.add_parser("scaffold"); dsc.add_argument("domain_id"); dsc.add_argument("--label", required=True); dsc.add_argument("--force", action="store_true"); dsc.set_defaults(func=cmd_domains)
     dben = dom_sub.add_parser("benchmark"); dben.add_argument("domain_id"); dben.set_defaults(func=cmd_domains)
+    dup = dom_sub.add_parser("update"); dup.add_argument("domain_id"); dup.add_argument("field"); dup.add_argument("values"); dup.set_defaults(func=cmd_domains)
+    dexp = dom_sub.add_parser("export"); dexp.add_argument("domain_id"); dexp.add_argument("--out-dir", default="."); dexp.set_defaults(func=cmd_domains)
+    dimp = dom_sub.add_parser("import"); dimp.add_argument("path"); dimp.add_argument("--force", action="store_true"); dimp.set_defaults(func=cmd_domains)
     ev = sub.add_parser("eval")
     ev.add_argument("--benchmark", action="store_true", help="Run multi-project benchmark suite")
     ev.add_argument("--samples", choices=["default", "asset-legaliq-crm"], default="default")
