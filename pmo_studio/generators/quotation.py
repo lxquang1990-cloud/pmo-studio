@@ -404,50 +404,60 @@ def _build_giadinh(ws, assumptions: List[Assumption]):
 # ── Default input for noop/deterministic generation ──────────────────────────
 
 def default_quotation_input(project_name: str, customer: str = "") -> QuotationInput:
+    """Default deterministic quotation for Asset Management / Quản lý TTB-Tài sản.
+
+    Stage21 root cause note: this used to contain an eOffice/document-management
+    template, which made 06-quotation.xlsx inconsistent with the Asset Management
+    BA/PM/IC artifacts. Keep this default aligned with the bundled Stage21 demo.
+    """
     screens_auth = [
-        ScreenRow("Màn hình Đăng nhập", 1.5,
-                  note="Form email/password, validate, gọi API xác thực, lưu token, xử lý lỗi sai thông tin"),
-        ScreenRow("Màn hình Quên / Đặt lại mật khẩu", 1.5,
-                  note="Nhập email → gửi OTP → verify OTP → form mật khẩu mới; validate độ mạnh mật khẩu"),
-        ScreenRow("Màn hình Hồ sơ cá nhân & Đổi mật khẩu", 2.0,
-                  note="Xem/chỉnh thông tin cá nhân, đổi mật khẩu có xác nhận mật khẩu cũ, upload avatar"),
-        ScreenRow("Quản lý Vai trò & Phân quyền", 3.0,
-                  note="CRUD vai trò, gán quyền theo module/màn hình, phân quyền theo phòng ban, audit log"),
+        ScreenRow("Màn hình Đăng nhập & Bảo mật", 1.5,
+                  note="Đăng nhập, quên mật khẩu, đổi mật khẩu, session/token, xử lý lỗi xác thực"),
+        ScreenRow("Quản lý Người dùng, Vai trò & Phân quyền", 3.0,
+                  note="CRUD user/role, phân quyền Admin/Asset Manager/Department Manager/Staff/Auditor, audit log"),
     ]
-    screens_dashboard = [
-        ScreenRow("Dashboard Tổng quan", 4.0,
-                  note="Widget KPI theo vai trò, bộ lọc kỳ/phòng ban, export PDF; gọi 4+ API tổng hợp"),
+    screens_asset_master = [
+        ScreenRow("Danh sách Tài sản / TTB", 2.5,
+                  note="Bảng phân trang, filter theo nhóm/phòng ban/trạng thái/người sử dụng, tìm kiếm asset_code/serial, export Excel"),
+        ScreenRow("Form Tạo / Cập nhật Hồ sơ Tài sản", 3.5,
+                  note="System-generated asset_code; nhập serial/external_ref, nhóm, ngày mua, nguyên giá, phòng ban, holder, attachment; validate required fields"),
+        ScreenRow("Chi tiết Tài sản & Lịch sử biến động", 2.5,
+                  note="Xem thông tin tài sản, holder history, trạng thái, chứng từ, audit log, lịch sử giao dịch"),
+        ScreenRow("Import Tài sản từ Excel", 2.5,
+                  note="Template import, validate employee_code/department_code/serial theo dòng, reject dòng lỗi và tiếp tục dòng hợp lệ"),
     ]
-    screens_doc = [
-        ScreenRow("Danh sách Văn bản đến/đi", 2.0,
-                  note="Bảng phân trang, bộ lọc đa điều kiện (loại/phòng ban/ngày), tìm kiếm full-text, export Excel"),
-        ScreenRow("Form Tạo / Chỉnh sửa Văn bản", 3.0,
-                  note="Form đa bước: thông tin chung → đính kèm file → chọn luồng duyệt; validate số văn bản, định dạng"),
-        ScreenRow("Chi tiết Văn bản & Lịch sử xử lý", 2.5,
-                  note="Xem nội dung, timeline duyệt từng bước, comment, download đính kèm, xem SLA còn lại"),
-        ScreenRow("Màn hình Chuyển xử lý & Phê duyệt", 3.5,
-                  note="Chọn người nhận, ghi ý kiến xử lý, ký duyệt; cảnh báo SLA; quy trình phê duyệt đa cấp"),
+    screens_transaction = [
+        ScreenRow("Cấp phát & Bàn giao Tài sản", 3.0,
+                  note="Cấp phát asset Available, lưu biên bản/evidence, cập nhật holder history và trạng thái Allocated"),
+        ScreenRow("Thu hồi & Điều chuyển Tài sản", 3.0,
+                  note="Thu hồi/transfer theo phòng ban/nhân sự, kiểm tra tình trạng, lưu evidence và approval status"),
+        ScreenRow("Kiểm kê Tài sản", 3.5,
+                  note="Tạo kỳ kiểm kê, ghi expected/actual/variance, bắt buộc reason/evidence và manager review"),
+        ScreenRow("Bảo trì / Sửa chữa / Thanh lý", 3.5,
+                  note="Ticket bảo trì, đề xuất thanh lý, khóa cấp phát khi Maintenance/Pending Liquidation, review/close workflow"),
     ]
     screens_report = [
-        ScreenRow("Báo cáo Thống kê Xử lý Văn bản", 3.0,
-                  note="Bộ lọc kỳ/phòng ban/loại VB; biểu đồ cột và tròn; export Excel và PDF"),
-        ScreenRow("Báo cáo Quá hạn SLA", 2.5,
-                  note="Danh sách VB quá hạn highlight màu đỏ, gửi nhắc nhở email tự động theo lịch"),
+        ScreenRow("Dashboard Tổng quan Tài sản", 3.5,
+                  note="KPI theo tổng tài sản, trạng thái, phòng ban, nhóm, giá trị, cảnh báo bảo trì/kiểm kê"),
+        ScreenRow("Báo cáo Tài sản theo Phòng ban / Người dùng", 3.0,
+                  note="Filter department/holder/group/status/period, export Excel/PDF đúng cột asset_code, name, holder, cost, date"),
+        ScreenRow("Báo cáo Kiểm kê & Biến động", 3.0,
+                  note="Báo cáo variance, lịch sử cấp phát/thu hồi/điều chuyển, maintenance/liquidation status"),
     ]
 
     hang_mucs = [
         HangMuc("I. PHẦN MỀM", subsystems=[
             SubSystem("1. Xác thực & Phân quyền", features=[
-                Feature("1.1 Đăng nhập & Bảo mật", screens=screens_auth),
+                Feature("1.1 Đăng nhập, người dùng và vai trò", screens=screens_auth),
             ]),
-            SubSystem("2. Dashboard", features=[
-                Feature("2.1 Trang tổng quan", screens=screens_dashboard),
+            SubSystem("2. Quản lý Danh mục Tài sản / TTB", features=[
+                Feature("2.1 Hồ sơ tài sản và import dữ liệu", screens=screens_asset_master),
             ]),
-            SubSystem("3. Quản lý Văn bản", features=[
-                Feature("3.1 Văn bản đến / đi", screens=screens_doc),
+            SubSystem("3. Nghiệp vụ Vòng đời Tài sản", features=[
+                Feature("3.1 Cấp phát, thu hồi, kiểm kê, bảo trì, thanh lý", screens=screens_transaction),
             ]),
-            SubSystem("4. Báo cáo", features=[
-                Feature("4.1 Báo cáo vận hành", screens=screens_report),
+            SubSystem("4. Dashboard & Báo cáo Tài sản", features=[
+                Feature("4.1 Báo cáo vận hành và export", screens=screens_report),
             ]),
         ]),
     ]
@@ -455,25 +465,28 @@ def default_quotation_input(project_name: str, customer: str = "") -> QuotationI
     out_of_screen = [
         OutOfScreenItem("Thiết lập dự án & DevOps", 4.0,
                         note="Repo, CI/CD, môi trường dev/staging/prod"),
-        OutOfScreenItem("Hỗ trợ tích hợp & UAT", 3.0,
-                        note="~10% manday màn hình; hỗ trợ kiểm thử tích hợp và UAT với khách"),
+        OutOfScreenItem("Thiết kế dữ liệu & migration template", 4.0,
+                        note="Data model tài sản, template import, mapping employee/department/group/status"),
+        OutOfScreenItem("Hỗ trợ tích hợp & UAT", 4.0,
+                        note="Hỗ trợ import/export với HRM/ERP/kế toán, kiểm thử UAT với khách hàng"),
         OutOfScreenItem("Tài liệu hóa", 4.0,
-                        note="Hướng dẫn người dùng, tài liệu API, hướng dẫn triển khai"),
+                        note="Hướng dẫn người dùng/admin, tài liệu API/import-export, hướng dẫn triển khai"),
         OutOfScreenItem("Triển khai & Go-live", 3.0,
-                        note="Đưa lên production, migration dữ liệu ban đầu"),
+                        note="Deploy production, cấu hình ban đầu, nạp dữ liệu danh mục ban đầu"),
         OutOfScreenItem("Đào tạo người dùng", 2.0,
-                        note="Đào tạo end-user và admin"),
+                        note="Đào tạo Asset Manager, Department Manager, Staff, Auditor"),
         OutOfScreenItem("Bảo hành 3 tháng", 3.0,
-                        note="~8% manday màn hình; sửa lỗi sau go-live"),
+                        note="Sửa lỗi sau go-live, hỗ trợ vận hành giai đoạn hypercare"),
     ]
 
     assumptions = [
-        Assumption("Phạm vi", "Không bao gồm quản trị hệ thống cấp server — tính phí riêng nếu có"),
-        Assumption("Phạm vi", "Migration dữ liệu lịch sử không trong phạm vi — tính phí riêng nếu có yêu cầu"),
-        Assumption("Kỹ thuật", "API bên thứ ba giả định REST chuẩn, có sẵn tài liệu và môi trường test"),
-        Assumption("Kỹ thuật", "SSO dùng OAuth2 tiêu chuẩn; không tùy biến luồng xác thực ngoài spec"),
-        Assumption("Dữ liệu", "Khách cung cấp môi trường production server và domain sẵn sàng trước go-live"),
-        Assumption("Dữ liệu", "Dữ liệu danh mục ban đầu (người dùng, phòng ban) do khách cung cấp dưới dạng Excel"),
+        Assumption("Phạm vi", "Báo giá áp dụng cho MVP quản lý TTB/Tài sản: asset master, cấp phát/bàn giao, thu hồi/điều chuyển, kiểm kê, bảo trì, thanh lý, báo cáo và phân quyền/audit."),
+        Assumption("Phạm vi", "RFID full integration, chữ ký số pháp lý, mobile native/PWA nâng cao và rule engine phức tạp là Phase 2/Optional, chưa bao gồm trong MVP."),
+        Assumption("Phạm vi", "Migration dữ liệu lịch sử quy mô lớn chưa bao gồm; chỉ bao gồm template import và hỗ trợ nạp dữ liệu danh mục ban đầu."),
+        Assumption("Kỹ thuật", "Tích hợp HRM/ERP/Kế toán realtime chỉ estimate sau khi có API contract, mapping field, test endpoint và owner xác nhận."),
+        Assumption("Kỹ thuật", "MVP dùng web-based workflow và import/export có kiểm soát; SSO/API bên thứ ba giả định theo chuẩn REST/OAuth2 nếu triển khai."),
+        Assumption("Dữ liệu", "Khách hàng cung cấp danh mục phòng ban, nhân sự, nhóm tài sản, trạng thái, dữ liệu tài sản ban đầu và quy tắc mã hóa/đối soát."),
+        Assumption("Dữ liệu", "asset_code do hệ thống sinh; người dùng nhập serial/external_ref. Dòng import lỗi bị reject theo dòng, dòng hợp lệ tiếp tục xử lý."),
     ]
 
     return QuotationInput(
