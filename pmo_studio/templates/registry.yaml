@@ -1,0 +1,14 @@
+version: 1
+templates:
+  generic.ba.prd:
+    version: 1.0.0
+    review_checklist: review/checklist.md
+  generic.ba.brd:
+    version: 1.0.0
+    review_checklist: review/checklist.md
+  generic.ba.srs:
+    version: 1.0.0
+    review_checklist: review/checklist.md
+  quotation.source_driven:
+    version: 1.0.0
+    review_checklist: review/checklist.md

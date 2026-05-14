@@ -31,6 +31,7 @@ from pmo_studio.core.registry import list_projects, recent_project, refresh_regi
 from pmo_studio.core.lifecycle import summarize_project, summary_markdown, sync_lifecycle, archive_project, clone_project, set_lifecycle
 from pmo_studio.llm.provider import api_key_status
 from pmo_studio.domain.detector import detect_domain, write_domain_detection
+from pmo_studio.core.dashboard import generate_project_index, generate_review_checklist
 from pmo_studio.generators.source_ba import read_redacted_sources
 
 DEFAULT_LLM_PROVIDER = "auto"
@@ -345,6 +346,16 @@ def cmd_demo(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=slug))
 
 
+def cmd_index(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    checklist = generate_review_checklist(p)
+    md, html = generate_project_index(p)
+    print(f"Project index: {md}")
+    print(f"HTML index: {html}")
+    print(f"Review checklist: {checklist}")
+
+
 def cmd_detect_domain(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -408,6 +419,9 @@ def build_parser():
     detect = sub.add_parser("detect-domain")
     detect.add_argument("slug", nargs="?")
     detect.set_defaults(func=cmd_detect_domain)
+    idx = sub.add_parser("index")
+    idx.add_argument("slug", nargs="?")
+    idx.set_defaults(func=cmd_index)
     exp = sub.add_parser("export")
     exp.add_argument("slug", nargs="?")
     exp.add_argument("--format", choices=["html", "docx", "zip", "all"], default="html")
