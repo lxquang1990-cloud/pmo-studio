@@ -423,6 +423,10 @@ def cmd_run_project(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=args.slug))
 
 
+def cmd_web(args):
+    from pmo_studio.webapp import run_web
+    run_web(Path(args.root), host=args.host, port=args.port)
+
 def cmd_telegram(args):
     if args.action == "prepare":
         run_args = argparse.Namespace(
@@ -624,6 +628,10 @@ def build_parser():
     demo.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop")
     demo.add_argument("--model", default=DEFAULT_LLM_MODEL)
     demo.set_defaults(func=cmd_demo)
+    web = sub.add_parser("web", help="Run local PMO Studio Web UI")
+    web.add_argument("--host", default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8765)
+    web.set_defaults(func=cmd_web)
     tg = sub.add_parser("telegram", help="Prepare Telegram delivery manifests without sending tokens/messages")
     tg_sub = tg.add_subparsers(dest="action", required=True)
     tprep = tg_sub.add_parser("prepare")

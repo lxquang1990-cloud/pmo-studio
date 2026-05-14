@@ -329,6 +329,27 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.0 local Web UI MVP
+
+Run the local-first Web UI:
+
+```bash
+pmo web --root ~/pmo-projects --host 127.0.0.1 --port 8765
+# or
+pmo-web --root ~/pmo-projects
+```
+
+Features:
+
+```text
+- Create project from source Markdown/text form
+- Run full PMO pipeline offline with noop LLM
+- List recent projects
+- Download DOCX, PDF, quotation XLSX, and delivery manifest
+```
+
+The Web UI is local-first and binds to `127.0.0.1` by default. Do not expose it publicly without an auth/reverse-proxy layer.
+
 ## CLI reference
 
 

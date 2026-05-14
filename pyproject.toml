@@ -1,6 +1,6 @@
 [project]
 name = "pmo-studio"
-version = "1.7.0"
+version = "2.0.0"
 description = "PMO Studio v2.1 Documentation Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -33,6 +33,7 @@ dev = ["pytest>=8.0", "pytest-cov>=6.0", "build>=1.0"]
 [project.scripts]
 pmo = "pmo_studio.cli:main"
 pmo-studio = "pmo_studio.cli:main"
+pmo-web = "pmo_studio.webapp:main"
 
 [tool.setuptools.packages.find]
 include = ["pmo_studio*"]
