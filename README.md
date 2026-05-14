@@ -80,6 +80,38 @@ python -m pmo_studio.cli --root /tmp/pmo-demo summary asset-management-demo
 
 Generated files will be under `/tmp/pmo-demo/asset-management-demo/`.
 
+## Project folder isolation
+
+PMO Studio uses one isolated folder tree per project. With the default root, projects live under:
+
+```text
+~/pmo-projects/<project-slug>/
+```
+
+Every command is scoped to that project root:
+
+```text
+~/pmo-projects/<project-slug>/
+├── config.json
+├── state.json
+├── source/
+│   ├── uploads/      # original uploaded files; never included in customer ZIP
+│   └── redacted/     # sanitized/converted source used by generators
+├── artifacts/        # PO/PM/BA/IC generated outputs
+├── quality/          # Gate A/B/C results and summary
+├── traceability/     # RTM and graph outputs
+├── exports/          # customer/management export packages
+└── metrics/          # run metrics
+```
+
+Generators read only `source/redacted/` inside the current project folder and write outputs only under that same project folder. The regression suite includes project-isolation tests to prevent cross-project source leakage.
+
+Domain routing is also project-local:
+
+- Asset Management source → Asset Management generator.
+- LegalIQ / legal source → LegalIQ generator.
+- Unknown/new domain source → generic source-driven generator, not Asset Management fallback.
+
 ## CLI reference
 
 
