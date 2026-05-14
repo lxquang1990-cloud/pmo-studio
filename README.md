@@ -329,6 +329,24 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.5 Customer-ready Review Mode
+
+Customer-ready Review Mode produces a practical dashboard for reviewing generated PMO artifacts before sending to a customer. It checks artifact presence, placeholders, template leakage, explicit scope/assumptions, testability cues, and integrates Quality Intelligence findings into suggested regeneration guidance.
+
+```bash
+pmo customer-review <slug>
+```
+
+Outputs:
+
+```text
+<project>/quality/customer-review.json
+<project>/quality/customer-review.md
+<project>/quality/customer-review.html
+```
+
+The Web UI now generates and exposes the customer review report when running a project.
+
 ## v2.4 Quality Intelligence
 
 Quality Intelligence adds source-grounded checks for domain drift, source coverage gaps, traceability gaps, unrendered template tokens, and duplicate key IDs.
