@@ -38,6 +38,7 @@ from pmo_studio.generators.source_ba import read_redacted_sources
 from pmo_studio.core.artifact_manifest import write_artifact_manifest
 from pmo_studio.templates.governance import list_versioned_templates, validate_templates
 from pmo_studio.domain.manager import list_domains, inspect_domain, validate_domain, scaffold_domain, benchmark_domain
+from pmo_studio.integrations.telegram_workflow import build_delivery_manifest
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -422,6 +423,25 @@ def cmd_run_project(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=args.slug))
 
 
+def cmd_telegram(args):
+    if args.action == "prepare":
+        run_args = argparse.Namespace(
+            root=args.root, slug=args.slug, source=args.source, customer=args.customer, product=args.product,
+            brief=args.brief, domain_pack=args.domain_pack, profile="customer", llm=args.llm, model=args.model,
+            refine=False, max_refine=0, signoff_final=False, by=args.by, force=args.force,
+        )
+        cmd_run_project(run_args)
+        p = Project.load(args.slug, root_base=Path(args.root))
+        out = build_delivery_manifest(p.root, chat_id=args.chat_id)
+        print(f"Telegram delivery manifest: {out}")
+        data = __import__('json').loads(out.read_text(encoding='utf-8'))
+        for f in data.get('files', []):
+            print(f"- {f['label']}: {f['path']} ({f['size_bytes']} bytes)")
+    elif args.action == "manifest":
+        p = Project.load(args.slug, root_base=Path(args.root))
+        out = build_delivery_manifest(p.root, chat_id=args.chat_id)
+        print(f"Telegram delivery manifest: {out}")
+
 def cmd_domains(args):
     if args.action == "list":
         for row in list_domains():
@@ -604,6 +624,15 @@ def build_parser():
     demo.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop")
     demo.add_argument("--model", default=DEFAULT_LLM_MODEL)
     demo.set_defaults(func=cmd_demo)
+    tg = sub.add_parser("telegram", help="Prepare Telegram delivery manifests without sending tokens/messages")
+    tg_sub = tg.add_subparsers(dest="action", required=True)
+    tprep = tg_sub.add_parser("prepare")
+    tprep.add_argument("slug"); tprep.add_argument("--source", required=True); tprep.add_argument("--customer", default="TBD"); tprep.add_argument("--product", default="PMO Studio Project")
+    tprep.add_argument("--brief", default="Generate a client-ready PMO documentation pack from Telegram inbound source.")
+    tprep.add_argument("--domain-pack", default="generic"); tprep.add_argument("--chat-id", default=None); tprep.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop"); tprep.add_argument("--model", default=DEFAULT_LLM_MODEL); tprep.add_argument("--by", default="Telegram Workflow"); tprep.add_argument("--force", action="store_true")
+    tprep.set_defaults(func=cmd_telegram)
+    tman = tg_sub.add_parser("manifest")
+    tman.add_argument("slug"); tman.add_argument("--chat-id", default=None); tman.set_defaults(func=cmd_telegram)
     dom = sub.add_parser("domains", help="Manage YAML domain packs")
     dom_sub = dom.add_subparsers(dest="action", required=True)
     dlist = dom_sub.add_parser("list"); dlist.set_defaults(func=cmd_domains)

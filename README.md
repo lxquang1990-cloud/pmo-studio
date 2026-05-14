@@ -308,6 +308,27 @@ pmo domains benchmark crm
 
 Domain validation checks the required v2 knowledge sections: workflows, reports, integrations, risk factors, and acceptance presets.
 
+## v1.7 Telegram document workflow
+
+PMO Studio includes a Telegram-oriented preparation workflow that does not send messages or store bot tokens. It runs the project pipeline and writes a delivery manifest for OpenClaw/Telegram adapters.
+
+```bash
+pmo --root ~/pmo-projects telegram prepare crm-demo \
+  --source ./source.docx \
+  --customer "Customer" \
+  --product "CRM" \
+  --chat-id "telegram:640968010" \
+  --llm noop
+```
+
+Delivery manifest:
+
+```text
+<project>/exports/customer/telegram-delivery.json
+```
+
+The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
+
 ## CLI reference
 
 
