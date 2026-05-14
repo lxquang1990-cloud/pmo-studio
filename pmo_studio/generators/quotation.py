@@ -591,16 +591,24 @@ def _generic_modules_from_source(source_text: str) -> list[tuple[str, str]]:
 
 def generic_quotation_input(project_name: str, customer: str = "", source_text: str = "") -> QuotationInput:
     """Generic source-driven quotation. Unknown domain must not fall back to Asset Management."""
-    modules = _generic_modules_from_source(source_text)
+    from pmo_studio.estimation.estimator import estimate_from_source
+    estimates = estimate_from_source(source_text)
+    grouped: dict[str, list] = {}
+    for estimate in estimates:
+        grouped.setdefault(estimate.module, []).append(estimate)
     subsystems = []
-    for idx, (name, desc) in enumerate(modules[:6], 1):
-        screens = [
-            ScreenRow(f"{name} - Danh sách/tra cứu", 2.5, note=desc),
-            ScreenRow(f"{name} - Tạo/Cập nhật/Chi tiết", 3.0, note="Form nghiệp vụ, validation, attachment/audit nếu có"),
-        ]
-        if idx <= 3:
-            screens.append(ScreenRow(f"{name} - Quy trình/Phê duyệt", 3.0, note="Workflow, permission, notification và trạng thái xử lý"))
-        subsystems.append(SubSystem(f"{idx}. {name}", features=[Feature(f"{idx}.1 {name}", screens=screens)]))
+    for idx, (module, items) in enumerate(list(grouped.items())[:8], 1):
+        features = []
+        for j, estimate in enumerate(items[:8], 1):
+            screens = [
+                ScreenRow(
+                    estimate.feature,
+                    estimate.final_manday,
+                    note=f"Complexity={estimate.complexity}; {estimate.rationale}; Source: {estimate.description}",
+                )
+            ]
+            features.append(Feature(f"{idx}.{j} {estimate.feature}", screens=screens))
+        subsystems.append(SubSystem(f"{idx}. {module}", features=features))
     return QuotationInput(
         project_name=project_name,
         hang_mucs=[HangMuc("I. PHẦN MỀM", subsystems=subsystems)],
@@ -659,6 +667,30 @@ def generate_quotation_for_project(project, out_path: Path | None = None) -> Pat
     return out
 
 
+def _estimate_rows_from_workbook(out_path: Path) -> list[list]:
+    from openpyxl import load_workbook
+    wb = load_workbook(out_path, data_only=True)
+    if "Feature List" not in wb.sheetnames:
+        return []
+    ws = wb["Feature List"]
+    rows = []
+    idx = 1
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        stt, name, _rate, manday, _cost, note = (list(row) + [None] * 6)[:6]
+        if not name or manday in (None, 0):
+            continue
+        stt_text = str(stt or "")
+        if not any(ch.isdigit() for ch in stt_text) or "." not in stt_text:
+            continue
+        complexity = "medium"
+        rationale = str(note or "Source-driven estimate")
+        if "Complexity=" in rationale:
+            complexity = rationale.split("Complexity=", 1)[1].split(";", 1)[0].strip() or complexity
+        work_id = "SCR-CORE-001"
+        rows.append([f"EST-{idx:03d}", "Feature", str(name), "Feature", work_id, complexity, rationale, manday or 0, None])
+        idx += 1
+    return rows
+
 def _append_traceability_sheet(out_path: Path) -> None:
     """Add machine-readable estimate links for RTM extraction.
 
@@ -673,7 +705,11 @@ def _append_traceability_sheet(out_path: Path) -> None:
         del wb["Estimate Detail"]
     ws = wb.create_sheet("Estimate Detail")
     ws.append(["EST ID", "Module", "Function", "Work Item Type", "Work Item ID", "Complexity", "Rationale", "Total md", "Cost VND"])
-    ws.append(["EST-001", "Quotation", "BaoGia_Template_v4 screen estimate", "Screen", "SCR-CORE-001", "high", "Linked to generated SRS screen for PMO traceability", 55, 55 * MANDAY_RATE_VND])
+    rows = _estimate_rows_from_workbook(out_path) or [["EST-001", "Quotation", "BaoGia_Template_v4 screen estimate", "Screen", "SCR-CORE-001", "high", "Linked to generated SRS screen for PMO traceability", 55, 55 * MANDAY_RATE_VND]]
+    for row in rows:
+        if row[-1] is None:
+            row[-1] = float(row[-2] or 0) * MANDAY_RATE_VND
+        ws.append(row)
     wb.save(out_path)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

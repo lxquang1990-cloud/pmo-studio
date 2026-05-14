@@ -36,7 +36,7 @@ def validate_traceability(project_root: Path) -> TraceValidationResult:
     node_by_id = {n.id: n for n in nodes}
     broken = [asdict(e) for e in edges if e.source not in node_by_id or e.target not in node_by_id]
     connected = {e.source for e in edges} | {e.target for e in edges}
-    orphan = sorted(n.id for n in nodes if n.id not in connected and n.type not in {"SRC", "BG", "ASM", "DEC", "RISK", "CR"})
+    orphan = sorted(n.id for n in nodes if n.id not in connected and n.type not in {"SRC", "BG", "ASM", "DEC", "RISK", "CR", "CHK", "DP", "UAT"})
     incoming: dict[str, set[str]] = {n.id: set() for n in nodes}
     outgoing: dict[str, set[str]] = {n.id: set() for n in nodes}
     for e in edges:

@@ -30,6 +30,8 @@ from pmo_studio.metrics.recorder import MetricsRecorder
 from pmo_studio.core.registry import list_projects, recent_project, refresh_registry
 from pmo_studio.core.lifecycle import summarize_project, summary_markdown, sync_lifecycle, archive_project, clone_project, set_lifecycle
 from pmo_studio.llm.provider import api_key_status
+from pmo_studio.domain.detector import detect_domain, write_domain_detection
+from pmo_studio.generators.source_ba import read_redacted_sources
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -343,6 +345,16 @@ def cmd_demo(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=slug))
 
 
+def cmd_detect_domain(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    result = detect_domain(read_redacted_sources(p), project_slug=p.config.project_slug, customer=p.config.customer)
+    out = write_domain_detection(p.root, result)
+    print(f"Domain: {result.selected_domain} score={result.score:.3f} confidence={result.confidence}")
+    print(f"Explanation: {result.explanation}")
+    print(f"Written: {out}")
+
+
 def cmd_eval(args):
     eval_root = Path(args.root) / "eval-runs"
     if args.benchmark:
@@ -393,6 +405,9 @@ def build_parser():
     trace.add_argument("slug", nargs="?")
     trace.add_argument("--validate", action="store_true")
     trace.set_defaults(func=cmd_trace)
+    detect = sub.add_parser("detect-domain")
+    detect.add_argument("slug", nargs="?")
+    detect.set_defaults(func=cmd_detect_domain)
     exp = sub.add_parser("export")
     exp.add_argument("slug", nargs="?")
     exp.add_argument("--format", choices=["html", "docx", "zip", "all"], default="html")

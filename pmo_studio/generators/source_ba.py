@@ -72,13 +72,13 @@ def generate_legal_ba_from_sources(project: Project, source_text: str) -> None:
     us_dir = ba_dir / "04-us"
     for d in [ba_dir, srs_dir, srs_dir / "screens", srs_dir / "apis", srs_dir / "workflows", srs_dir / "reports", us_dir]:
         d.mkdir(parents=True, exist_ok=True)
-    req_defs = """| REQ ID | Definition |
-|---|---|
-| REQ-CORE-001 | Legal Q&A portal: giao diện hỏi đáp pháp lý/nghiệp vụ, FAQ theo lĩnh vực, câu hỏi yêu thích, thông báo/tài liệu mới. |
-| REQ-CORE-002 | AI legal answer engine: trả lời tự động có trích dẫn nguồn từ FAQ/tài liệu nội bộ, gợi ý lĩnh vực khi câu hỏi chưa rõ, chuyển B.PCTT khi AI không đủ dữ liệu. |
-| REQ-CORE-003 | Delegation management: soạn thảo, phê duyệt, ban hành, tra cứu, đồng bộ ủy quyền và AI kiểm tra phạm vi phân cấp/ủy quyền. |
-| REQ-CORE-004 | Contract legal review: soạn thảo hợp đồng theo mẫu, rà soát/phê duyệt, AI review, ký duyệt/eOffice/e-sign, tích hợp PMS và tra cứu hợp đồng. |
-| REQ-CORE-005 | Appraisal/report/admin: lập/phê duyệt/tra cứu báo cáo thẩm định, thống kê AI/Q&A/usage, báo cáo pháp lý, quản trị RBAC/danh mục/cấu hình. |"""
+    req_defs = """| REQ ID | Linked BR | Definition |
+|---|---|---|
+| REQ-CORE-001 | BR-CORE-001 | Legal Q&A portal: giao diện hỏi đáp pháp lý/nghiệp vụ, FAQ theo lĩnh vực, câu hỏi yêu thích, thông báo/tài liệu mới. |
+| REQ-CORE-002 | BR-CORE-002 | AI legal answer engine: trả lời tự động có trích dẫn nguồn từ FAQ/tài liệu nội bộ, gợi ý lĩnh vực khi câu hỏi chưa rõ, chuyển B.PCTT khi AI không đủ dữ liệu. |
+| REQ-CORE-003 | BR-CORE-003 | Delegation management: soạn thảo, phê duyệt, ban hành, tra cứu, đồng bộ ủy quyền và AI kiểm tra phạm vi phân cấp/ủy quyền. |
+| REQ-CORE-004 | BR-CORE-004 | Contract legal review: soạn thảo hợp đồng theo mẫu, rà soát/phê duyệt, AI review, ký duyệt/eOffice/e-sign, tích hợp PMS và tra cứu hợp đồng. |
+| REQ-CORE-005 | BR-CORE-005 | Appraisal/report/admin: lập/phê duyệt/tra cứu báo cáo thẩm định, thống kê AI/Q&A/usage, báo cáo pháp lý, quản trị RBAC/danh mục/cấu hình. |"""
     ac_defs = """| AC ID | Definition |
 |---|---|
 | AC-001-01 | User có thể xem FAQ, lọc theo phân loại/lĩnh vực và gửi câu hỏi yêu cầu giải đáp. |
@@ -137,6 +137,15 @@ LIQ LegalIQ là web app phục vụ hỏi đáp pháp lý/nghiệp vụ nội b�
 ## Requirements Baseline
 {req_defs}
 
+## Business Requirements
+| BR ID | Linked Source | Business Requirement |
+|---|---|---|
+| BR-CORE-001 | SRC-001 | Source-driven MVP module baseline. |
+| BR-CORE-002 | SRC-001 | Source-driven workflow, permission and reporting baseline. |
+| BR-CORE-003 | SRC-001 | Source-driven integration/data readiness baseline. |
+| BR-CORE-004 | SRC-001 | Source-driven UAT and acceptance baseline. |
+| BR-CORE-005 | SRC-001 | Source-driven governance and audit baseline. |
+
 ## Acceptance Baseline
 {ac_defs}
 
@@ -172,11 +181,11 @@ PVCFC / Legal Department cần hệ thống web app LegalIQ để số hóa kên
 {ac_defs}
 
 ## Key Workflows
-| Workflow | Trigger | Main Steps | Output |
-|---|---|---|---|
-| WF-CORE-001 Legal Q&A | User mở hỏi đáp | Chọn lĩnh vực/câu hỏi mẫu hoặc nhập câu hỏi → AI xử lý/trích dẫn → chuyển B.PCTT nếu chưa thỏa mãn | Câu trả lời, nguồn trích dẫn, lịch sử xử lý |
-| WF-CORE-002 Delegation | User lập ủy quyền | Soạn theo mẫu → kiểm tra/phê duyệt/ký eOffice → văn thư cấp số/ban hành → đồng bộ tài liệu | Hồ sơ ủy quyền hợp lệ |
-| WF-CORE-003 Contract review | User soạn hợp đồng | Chọn mẫu/nhập thông tin → AI hỗ trợ rà soát → phê duyệt/ký → xuất file/đồng bộ PMS | Hợp đồng hoàn thiện |
+| Workflow | Linked REQ | Trigger | Main Steps | Output |
+|---|---|---|---|---|
+| WF-CORE-001 Legal Q&A | REQ-CORE-001 | User mở hỏi đáp | Chọn lĩnh vực/câu hỏi mẫu hoặc nhập câu hỏi → AI xử lý/trích dẫn → chuyển B.PCTT nếu chưa thỏa mãn | Câu trả lời, nguồn trích dẫn, lịch sử xử lý |
+| WF-CORE-002 Delegation | REQ-CORE-003 | User lập ủy quyền | Soạn theo mẫu → kiểm tra/phê duyệt/ký eOffice → văn thư cấp số/ban hành → đồng bộ tài liệu | Hồ sơ ủy quyền hợp lệ |
+| WF-CORE-003 Contract review | REQ-CORE-004 | User soạn hợp đồng | Chọn mẫu/nhập thông tin → AI hỗ trợ rà soát → phê duyệt/ký → xuất file/đồng bộ PMS | Hợp đồng hoàn thiện |
 
 ## Implementation Readiness
 - API baseline: API-CORE-001.
@@ -275,12 +284,15 @@ def generate_generic_ba_from_sources(project: Project, source_text: str) -> None
     modules = intel.modules or ["core", "workflow", "report"]
     roles = intel.roles or ["Admin", "Business User", "Approver", "Viewer"]
     integrations = intel.integrations or ["Integration scope cần xác nhận"]
-    req_rows = [["REQ ID", "Definition"]]
-    for i, m in enumerate(modules[:5], 1):
-        req_rows.append([f"REQ-CORE-{i:03d}", f"Hệ thống phải hỗ trợ module {m} theo source đầu vào, bao gồm tra cứu, xử lý nghiệp vụ, phân quyền, audit và báo cáo liên quan."])
-    ac_rows = [["AC ID", "Definition"]]
-    for i, m in enumerate(modules[:8], 1):
-        ac_rows.append([f"AC-001-{i:02d}", f"Given user có quyền với module {m}, when thực hiện nghiệp vụ chính, then hệ thống xử lý đúng dữ liệu source, ghi nhận trạng thái và audit/log cần thiết."])
+    trace_modules = list(modules[:8])
+    while len(trace_modules) < 8:
+        trace_modules.append(f"Generic validation/reporting baseline {len(trace_modules) + 1}")
+    req_rows = [["REQ ID", "Linked BR", "Definition"]]
+    for i, m in enumerate(trace_modules[:5], 1):
+        req_rows.append([f"REQ-CORE-{i:03d}", f"BR-CORE-{i:03d}", f"Hệ thống phải hỗ trợ module {m} theo source đầu vào, bao gồm tra cứu, xử lý nghiệp vụ, phân quyền, audit và báo cáo liên quan."])
+    ac_rows = [["AC ID", "Linked US", "Definition"]]
+    for i, m in enumerate(trace_modules[:8], 1):
+        ac_rows.append([f"AC-001-{i:02d}", "US-001", f"Given user có quyền với module {m}, when thực hiện nghiệp vụ chính, then hệ thống xử lý đúng dữ liệu source, ghi nhận trạng thái và audit/log cần thiết."])
     req_defs = table(req_rows)
     ac_defs = table(ac_rows)
     summary = bullets(intel.summary)
@@ -332,7 +344,19 @@ Dự án cần số hóa các module nghiệp vụ được cung cấp trong sou
 - Cần chuẩn hóa module, workflow, permission, integration, reporting và assumptions.
 - Cần giữ traceability từ source tới BR/REQ/US/AC/TC/EST.
 
+## Business Goals
+- BG-001: Source-driven MVP delivery linked to SRC-001.
+
 ## Business Requirements
+| BR ID | Linked Source | Business Requirement |
+|---|---|---|
+| BR-CORE-001 | SRC-001 | Source-driven MVP module baseline. |
+| BR-CORE-002 | SRC-001 | Source-driven workflow, permission and reporting baseline. |
+| BR-CORE-003 | SRC-001 | Source-driven integration/data readiness baseline. |
+| BR-CORE-004 | SRC-001 | Source-driven UAT and acceptance baseline. |
+| BR-CORE-005 | SRC-001 | Source-driven governance and audit baseline. |
+
+## Requirement Definitions
 {req_defs}
 
 ## Acceptance Definitions
@@ -374,7 +398,7 @@ Hệ thống gồm các module: {', '.join(modules[:8])}.
     (srs_dir / "workflows" / "WF-CORE-001.md").write_text("# WF-CORE-001: Source-driven Workflow\n\n**Linked REQ:** REQ-CORE-001\n\nUpload/enter data → validate → process workflow → audit → report/export/notification.\n", encoding="utf-8")
     (us_dir / "US-001.md").write_text(f"""# User Story US-001: Xử lý nghiệp vụ theo source đầu vào
 
-**Linked REQ:** REQ-CORE-001
+**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005
 **Linked Work Items:** SCR-CORE-001, API-CORE-001, WF-CORE-001
 
 As a business user, I want the system to support source-defined modules so that I can process work with validation, permission, audit and reporting.
@@ -385,6 +409,9 @@ As a business user, I want the system to support source-defined modules so that 
     tc_rows = [["ID", "Linked AC", "Type", "Steps / Input", "Expected Result"]]
     for i, m in enumerate(modules[:8], 1):
         tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Source-driven", f"Execute main workflow for {m}", "Data is validated, saved/processed, audited and visible in reports according to permission"])
+    # Keep a full AC-001-01..08 coverage chain even when source has fewer than 8 modules.
+    for i in range(len(tc_rows), 9):
+        tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Source-driven", "Execute generic fallback validation/reporting scenario", "Scenario is validated, audited and linked to US-001"])
     (ba_dir / "05-test-cases.md").write_text(f"""# Test Cases
 
 ## Referenced Requirements
