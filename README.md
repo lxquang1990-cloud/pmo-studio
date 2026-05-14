@@ -293,6 +293,21 @@ make dist
 
 GitHub release workflow builds and uploads `dist/*` for version tags.
 
+## v1.6 domain management CLI
+
+Manage YAML domain packs from the CLI:
+
+```bash
+pmo domains list
+pmo domains inspect crm
+pmo domains validate
+pmo domains validate crm
+pmo domains scaffold banking --label "Banking"
+pmo domains benchmark crm
+```
+
+Domain validation checks the required v2 knowledge sections: workflows, reports, integrations, risk factors, and acceptance presets.
+
 ## CLI reference
 
 

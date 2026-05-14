@@ -1,6 +1,6 @@
 id: generic
 label: Generic Source-driven
-keywords: []
+keywords: [generic, workflow, reporting, business application]
 modules:
   - core workspace
   - workflow
