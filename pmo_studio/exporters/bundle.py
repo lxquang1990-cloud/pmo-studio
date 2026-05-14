@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pmo_studio.exporters.docx_export import export_docx
 from pmo_studio.exporters.static_html import export_static
+from pmo_studio.core.signoff import assert_export_allowed
 
 
 BUNDLE_INCLUDE_DIRS = [
@@ -20,7 +21,8 @@ BUNDLE_INCLUDE_DIRS = [
 ]
 
 
-def export_bundle(project_root: Path, profile: str = "client-ready", include_sources: bool = False) -> Path:
+def export_bundle(project_root: Path, profile: str = "client-ready", include_sources: bool = False, force: bool = False) -> Path:
+    assert_export_allowed(project_root, force=force)
     html = export_static(project_root)
     docx = export_docx(project_root, profile=profile)
     out_dir = project_root / "exports" / profile

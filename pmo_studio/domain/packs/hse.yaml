@@ -1,0 +1,12 @@
+id: hse
+label: HSE / Safety Management
+keywords: [hse, incident, safety, an toàn, môi trường, capa, inspection, risk assessment]
+modules: [incident report, investigation, capa, inspection, risk assessment, safety observation, dashboard]
+roles:
+  HSEOfficer: HSE Officer
+  Inspector: Inspector
+  DepartmentManager: Department Manager
+  Employee: Employee
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

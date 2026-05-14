@@ -32,6 +32,7 @@ from pmo_studio.core.lifecycle import summarize_project, summary_markdown, sync_
 from pmo_studio.llm.provider import api_key_status
 from pmo_studio.domain.detector import detect_domain, write_domain_detection
 from pmo_studio.core.dashboard import generate_project_index, generate_review_checklist
+from pmo_studio.core.signoff import update_signoff, load_signoff
 from pmo_studio.generators.source_ba import read_redacted_sources
 
 DEFAULT_LLM_PROVIDER = "auto"
@@ -182,11 +183,11 @@ def cmd_export(args):
     p = Project.load(args.slug, root_base=Path(args.root))
     outputs = []
     if args.format in {"html", "all"}:
-        outputs.append(export_static(p.root))
+        outputs.append(export_static(p.root, force=args.force))
     if args.format in {"docx", "all"}:
-        outputs.append(export_docx(p.root, profile=args.profile))
+        outputs.append(export_docx(p.root, profile=args.profile, force=args.force))
     if args.format in {"zip", "all"}:
-        outputs.append(export_bundle(p.root, profile=args.profile, include_sources=args.include_redacted_sources))
+        outputs.append(export_bundle(p.root, profile=args.profile, include_sources=args.include_redacted_sources, force=args.force))
     for path in outputs:
         print(f"Exported: {path}")
 
@@ -346,6 +347,15 @@ def cmd_demo(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=slug))
 
 
+def cmd_signoff(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    path = update_signoff(p, args.role, args.status, approved_by=args.by, note=args.note)
+    data = load_signoff(p)
+    print(f"Signoff updated: {path}")
+    print(f"Locked: {data.get('locked', False)}")
+
+
 def cmd_index(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -422,11 +432,19 @@ def build_parser():
     idx = sub.add_parser("index")
     idx.add_argument("slug", nargs="?")
     idx.set_defaults(func=cmd_index)
+    so = sub.add_parser("signoff")
+    so.add_argument("slug", nargs="?")
+    so.add_argument("role", choices=["PO", "PM", "BA", "IC", "Quotation", "Final"])
+    so.add_argument("status", choices=["approved", "rejected", "pending"])
+    so.add_argument("--by", default="Snail")
+    so.add_argument("--note", default="")
+    so.set_defaults(func=cmd_signoff)
     exp = sub.add_parser("export")
     exp.add_argument("slug", nargs="?")
     exp.add_argument("--format", choices=["html", "docx", "zip", "all"], default="html")
     exp.add_argument("--profile", default="client-ready")
     exp.add_argument("--include-redacted-sources", action="store_true", help="Include redacted sources in ZIP bundle; originals are never included")
+    exp.add_argument("--force", action="store_true", help="Allow explicit re-export after final sign-off lock")
     exp.set_defaults(func=cmd_export)
     baseline = sub.add_parser("baseline")
     baseline.add_argument("slug", nargs="?")

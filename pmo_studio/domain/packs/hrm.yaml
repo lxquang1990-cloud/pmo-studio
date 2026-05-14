@@ -1,0 +1,12 @@
+id: hrm
+label: HRM / Human Resource Management
+keywords: [hrm, nhân sự, nhan su, employee, payroll, leave, attendance, recruitment, onboarding]
+modules: [employee profile, recruitment, onboarding, leave, attendance, payroll, performance, hr reports]
+roles:
+  HRAdmin: HR Admin
+  Employee: Employee
+  Manager: Line Manager
+  PayrollOfficer: Payroll Officer
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

@@ -1,0 +1,12 @@
+id: eoffice
+label: eOffice / Document Management
+keywords: [eoffice, văn bản, van ban, công văn, cong van, trình ký, trinh ky, phát hành văn bản]
+modules: [văn bản đến, văn bản đi, hồ sơ công việc, trình ký, phát hành, báo cáo văn bản, lưu trữ]
+roles:
+  Clerk: Văn thư
+  Officer: Chuyên viên
+  DeptHead: Lãnh đạo phòng
+  Director: Lãnh đạo cơ quan
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

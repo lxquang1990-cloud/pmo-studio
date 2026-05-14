@@ -1,0 +1,12 @@
+id: lms
+label: LMS / Learning Management
+keywords: [lms, learning, training, khóa học, khoa hoc, quiz, exam, certificate, e-learning]
+modules: [course catalog, enrollment, lesson, quiz exam, certificate, training plan, learning report]
+roles:
+  Learner: Learner
+  Instructor: Instructor
+  TrainingAdmin: Training Admin
+  Manager: Manager
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

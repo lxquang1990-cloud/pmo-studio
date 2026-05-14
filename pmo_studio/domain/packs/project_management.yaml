@@ -1,0 +1,12 @@
+id: project_management
+label: PMS / Project Management
+keywords: [pms, project, wbs, gantt, milestone, timesheet, nguồn lực, resource]
+modules: [project plan, wbs, milestone, resource, timesheet, issue risk, dashboard]
+roles:
+  PM: Project Manager
+  TeamLead: Team Lead
+  Member: Project Member
+  Sponsor: Sponsor
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

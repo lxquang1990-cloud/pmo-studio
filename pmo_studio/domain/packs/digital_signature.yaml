@@ -1,0 +1,12 @@
+id: digital_signature
+label: Digital Signature / Ký số
+keywords: [ký số, ky so, digital signature, hsm, pki, certificate, ocsp, tsa, remote signing]
+modules: [remote signing, certificate management, signature verification, hsm connector, audit trail, timestamp]
+roles:
+  Signer: Người ký
+  CAAdmin: CA Admin
+  Verifier: Người xác thực
+  Auditor: Auditor
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

@@ -9,6 +9,7 @@ from pmo_studio.llm.provider import LLMClient, NoopLLMClient
 from pmo_studio.llm.writer import ArtifactWriter
 from pmo_studio.domain.prompts import get_domain, inject_domain_prompt
 from pmo_studio.generators.intelligence import apply_domain_terms, build_intelligence, bullets, table
+from pmo_studio.domain.rendering import build_render_context, render_table
 
 REQ_DEFINITIONS = """| REQ ID | Definition |
 |---|---|
@@ -281,25 +282,18 @@ def generate_generic_ba_from_sources(project: Project, source_text: str) -> None
     us_dir = ba_dir / "04-us"
     for d in [ba_dir, srs_dir, srs_dir / "screens", srs_dir / "apis", srs_dir / "workflows", srs_dir / "reports", us_dir]:
         d.mkdir(parents=True, exist_ok=True)
-    modules = intel.modules or ["core", "workflow", "report"]
-    roles = intel.roles or ["Admin", "Business User", "Approver", "Viewer"]
+    ctx = build_render_context(source_text, project_slug=getattr(project.config, "project_slug", project.root.name), customer=getattr(project.config, "customer", ""))
+    modules = ctx.modules or intel.modules or ["core", "workflow", "report"]
+    roles = ctx.roles or intel.roles or ["Admin", "Business User", "Approver", "Viewer"]
     integrations = intel.integrations or ["Integration scope cần xác nhận"]
-    trace_modules = list(modules[:8])
-    while len(trace_modules) < 8:
-        trace_modules.append(f"Generic validation/reporting baseline {len(trace_modules) + 1}")
-    req_rows = [["REQ ID", "Linked BR", "Definition"]]
-    for i, m in enumerate(trace_modules[:5], 1):
-        req_rows.append([f"REQ-CORE-{i:03d}", f"BR-CORE-{i:03d}", f"Hệ thống phải hỗ trợ module {m} theo source đầu vào, bao gồm tra cứu, xử lý nghiệp vụ, phân quyền, audit và báo cáo liên quan."])
-    ac_rows = [["AC ID", "Linked US", "Definition"]]
-    for i, m in enumerate(trace_modules[:8], 1):
-        ac_rows.append([f"AC-001-{i:02d}", "US-001", f"Given user có quyền với module {m}, when thực hiện nghiệp vụ chính, then hệ thống xử lý đúng dữ liệu source, ghi nhận trạng thái và audit/log cần thiết."])
-    req_defs = table(req_rows)
-    ac_defs = table(ac_rows)
+    req_defs = render_table(ctx.requirements)
+    ac_defs = render_table(ctx.acceptance)
+    br_defs = render_table(ctx.business_requirements)
     summary = bullets(intel.summary)
     prd = f"""# PRD: {getattr(project.config, 'project_slug', project.root.name)}
 
 ## Overview
-Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(project.config, 'project_slug', project.root.name)}. Đây là generic source-driven baseline cho domain chưa có template riêng.
+Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(project.config, 'project_slug', project.root.name)}. Domain pack: {ctx.pack.label}; detection: {getattr(ctx.detection, 'confidence', 'n/a')} score={getattr(ctx.detection, 'score', 'n/a')}.
 
 ## Source Intelligence Summary
 {summary}
@@ -337,7 +331,7 @@ Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(proj
     brd = f"""# BRD
 
 ## Business Context
-Dự án cần số hóa các module nghiệp vụ được cung cấp trong source đầu vào, với baseline generic để tránh áp đặt domain sai khi chưa có domain pack riêng.
+Dự án cần số hóa các module nghiệp vụ được cung cấp trong source đầu vào theo domain pack {ctx.pack.label}, với baseline source-driven để tránh áp đặt domain sai.
 
 ## Business Drivers
 - Cần chuyển source mô tả thành bộ tài liệu PO/PM/BA/IC có thể review.
@@ -348,13 +342,7 @@ Dự án cần số hóa các module nghiệp vụ được cung cấp trong sou
 - BG-001: Source-driven MVP delivery linked to SRC-001.
 
 ## Business Requirements
-| BR ID | Linked Source | Business Requirement |
-|---|---|---|
-| BR-CORE-001 | SRC-001 | Source-driven MVP module baseline. |
-| BR-CORE-002 | SRC-001 | Source-driven workflow, permission and reporting baseline. |
-| BR-CORE-003 | SRC-001 | Source-driven integration/data readiness baseline. |
-| BR-CORE-004 | SRC-001 | Source-driven UAT and acceptance baseline. |
-| BR-CORE-005 | SRC-001 | Source-driven governance and audit baseline. |
+{br_defs}
 
 ## Requirement Definitions
 {req_defs}
@@ -371,7 +359,7 @@ Dự án cần số hóa các module nghiệp vụ được cung cấp trong sou
     srs = f"""# SRS
 
 ## 1. Introduction
-SRS mô tả baseline generic source-driven cho domain chưa có template riêng.
+SRS mô tả baseline source-driven theo domain pack {ctx.pack.label}.
 
 ## 2. Product Overview
 Hệ thống gồm các module: {', '.join(modules[:8])}.

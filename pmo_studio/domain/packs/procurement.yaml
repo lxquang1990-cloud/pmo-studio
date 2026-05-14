@@ -1,0 +1,12 @@
+id: procurement
+label: Procurement / Purchasing
+keywords: [procurement, purchasing, mua sắm, mua sam, vendor, supplier, rfq, po, purchase order, bidding]
+modules: [purchase request, rfq, vendor management, bidding, purchase order, receiving, contract, procurement reports]
+roles:
+  Requester: Requester
+  Buyer: Buyer
+  ProcurementManager: Procurement Manager
+  Vendor: Vendor
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

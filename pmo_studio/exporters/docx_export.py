@@ -5,6 +5,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from pmo_studio.core.signoff import assert_export_allowed
+
 try:
     from docx import Document
 except Exception:  # pragma: no cover
@@ -65,7 +67,8 @@ def _add_markdown(document, text: str) -> None:
     _flush_table(document, table_buffer)
 
 
-def export_docx(project_root: Path, profile: str = "client-ready") -> Path:
+def export_docx(project_root: Path, profile: str = "client-ready", force: bool = False) -> Path:
+    assert_export_allowed(project_root, force=force)
     if Document is None:
         raise RuntimeError("python-docx is not installed")
     doc = Document()
