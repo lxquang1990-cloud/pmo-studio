@@ -329,6 +329,23 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.4 Quality Intelligence
+
+Quality Intelligence adds source-grounded checks for domain drift, source coverage gaps, traceability gaps, unrendered template tokens, and duplicate key IDs.
+
+```bash
+pmo quality-intel <slug>
+```
+
+Outputs:
+
+```text
+<project>/quality/intelligence.json
+<project>/quality/intelligence.md
+```
+
+The Web UI now includes Quality Intelligence as a downloadable artifact when present.
+
 ## v2.3 Real Telegram Bot Workflow
 
 PMO Studio now has a stateful Telegram workflow engine for provider adapters such as OpenClaw. It stores session state per chat, asks for missing metadata, runs the PMO pipeline, and returns a delivery manifest. It still does not store bot tokens or send provider messages directly.

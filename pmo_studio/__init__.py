@@ -1,3 +1,3 @@
 """PMO Studio v2.1 Documentation Operating System."""
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"

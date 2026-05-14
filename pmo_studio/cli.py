@@ -39,6 +39,7 @@ from pmo_studio.core.artifact_manifest import write_artifact_manifest
 from pmo_studio.templates.governance import list_versioned_templates, validate_templates
 from pmo_studio.domain.manager import list_domains, inspect_domain, validate_domain, scaffold_domain, benchmark_domain, update_domain, export_domain, import_domain
 from pmo_studio.integrations.telegram_workflow import build_delivery_manifest, ingest_inbound, run_session, load_session
+from pmo_studio.quality.intelligence import write_quality_intelligence
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -423,6 +424,12 @@ def cmd_run_project(args):
     cmd_summary(argparse.Namespace(root=str(root), slug=args.slug))
 
 
+def cmd_quality(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_quality_intelligence(p.root)
+    print(f"Quality intelligence: {out}")
+
 def cmd_web(args):
     from pmo_studio.webapp import run_web
     run_web(Path(args.root), host=args.host, port=args.port)
@@ -648,6 +655,8 @@ def build_parser():
     demo.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop")
     demo.add_argument("--model", default=DEFAULT_LLM_MODEL)
     demo.set_defaults(func=cmd_demo)
+    qi = sub.add_parser("quality-intel", help="Run source-grounded quality intelligence checks")
+    qi.add_argument("slug", nargs="?"); qi.set_defaults(func=cmd_quality)
     web = sub.add_parser("web", help="Run local PMO Studio Web UI")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)

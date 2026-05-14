@@ -23,6 +23,7 @@ from pmo_studio.core.lifecycle import summarize_project
 from pmo_studio.core.project import DEFAULT_ROOT, Project
 from pmo_studio.core.registry import list_projects, refresh_registry
 from pmo_studio.integrations.telegram_workflow import build_delivery_manifest
+from pmo_studio.quality.intelligence import write_quality_intelligence
 from pmo_studio.domain.manager import export_domain, import_domain, inspect_domain, list_domains, scaffold_domain, update_domain, validate_domain
 
 
@@ -85,6 +86,7 @@ def run_web(root: Path = DEFAULT_ROOT, host: str = "127.0.0.1", port: int = 8765
                 try:
                     cmd_run_project(argparse.Namespace(root=str(root), slug=slug, source=str(source), customer=customer, product=product, brief="Generated from PMO Studio Web UI", domain_pack="generic", profile="customer", llm="noop", model="Tier2", refine=False, max_refine=0, signoff_final=False, by="Web UI", force=True))
                     project = Project.load(slug, root_base=root)
+                    write_quality_intelligence(project.root)
                     build_delivery_manifest(project.root)
                     _write_status(root, WebRunStatus("pmo.web_run_status.v1", slug, "done", _now(), _now(), str(source)))
                 except Exception as exc:
@@ -292,7 +294,7 @@ def _write_source(root: Path, slug: str, source_text: str, upload: tuple[str, by
 
 
 def _download_files(project_root: Path) -> list[tuple[str, Path]]:
-    candidates = [("DOCX documentation pack", "exports/customer/pmo-documentation-pack.docx"), ("PDF documentation pack", "exports/customer/pmo-documentation-pack.pdf"), ("Quotation workbook", "artifacts/ba/06-quotation.xlsx"), ("Project bundle", f"exports/customer/{project_root.name}-pmo-bundle.zip"), ("Dashboard HTML", "exports/management/index.html"), ("Telegram delivery manifest", "exports/customer/telegram-delivery.json"), ("Artifact manifest", "artifacts/manifest.json")]
+    candidates = [("DOCX documentation pack", "exports/customer/pmo-documentation-pack.docx"), ("PDF documentation pack", "exports/customer/pmo-documentation-pack.pdf"), ("Quotation workbook", "artifacts/ba/06-quotation.xlsx"), ("Quality intelligence", "quality/intelligence.md"), ("Project bundle", f"exports/customer/{project_root.name}-pmo-bundle.zip"), ("Dashboard HTML", "exports/management/index.html"), ("Telegram delivery manifest", "exports/customer/telegram-delivery.json"), ("Artifact manifest", "artifacts/manifest.json")]
     return [(label, project_root / rel) for label, rel in candidates if (project_root / rel).exists()]
 
 
