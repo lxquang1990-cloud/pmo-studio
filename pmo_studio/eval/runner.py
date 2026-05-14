@@ -102,6 +102,42 @@ token=should_be_redacted_hse
 ]
 
 
+V12_SAMPLE_CASES = [
+    EvalCase(
+        name="Asset Management v1.2 E2E", slug="bench-asset", customer="Demo Asset", products=["Asset Management"],
+        brief="Validate Asset Management pipeline.",
+        source="""# Asset Management
+| STT | CHỨC NĂNG | MÔ TẢ |
+| 1 | Quản lý Danh mục Tài sản / TTB | Mã tài sản, serial, phòng ban, người sử dụng |
+| 2 | Cấp phát bàn giao thu hồi điều chuyển | Workflow tài sản, audit, evidence |
+| 3 | Kiểm kê bảo trì thanh lý | Campaign kiểm kê, bảo trì, báo cáo tài sản |
+""",
+        expected_id_types={"SRC", "BR", "REQ", "SCR", "API", "WF", "US", "AC", "TC", "EST"}, min_trace_edges=50, expected_manday_max=180.0
+    ),
+    EvalCase(
+        name="LegalIQ v1.2 E2E", slug="bench-legaliq", customer="PVCFC Legal", products=["LegalIQ"],
+        brief="Validate LegalIQ pipeline.",
+        source="""# LegalIQ
+| STT | CHỨC NĂNG | MÔ TẢ |
+| 1 | Hỏi đáp pháp lý | FAQ, AI trả lời có trích dẫn nguồn |
+| 2 | Quản lý ủy quyền | Trình ký eOffice, ban hành, đồng bộ |
+| 3 | Hợp đồng thẩm định | PMS integration, báo cáo pháp lý, RBAC audit |
+""",
+        expected_id_types={"SRC", "BR", "REQ", "SCR", "API", "WF", "US", "AC", "TC", "EST"}, min_trace_edges=50, expected_manday_max=220.0
+    ),
+    EvalCase(
+        name="CRM v1.2 E2E", slug="bench-crm", customer="Demo CRM", products=["CRM"],
+        brief="Validate CRM source-driven pipeline.",
+        source="""# CRM
+| STT | CHỨC NĂNG | MÔ TẢ |
+| 1 | Quản lý Lead | Capture, qualify, assign lead |
+| 2 | Opportunity Pipeline | Stage, forecast, approval workflow |
+| 3 | Sales Dashboard | Báo cáo doanh số, conversion, export XLSX |
+""",
+        expected_id_types={"SRC", "BR", "REQ", "SCR", "API", "WF", "US", "AC", "TC", "EST"}, min_trace_edges=50, expected_manday_max=180.0
+    ),
+]
+
 def run_eval(root: Path | None = None) -> EvalResult:
     """Backward-compatible single eval used by earlier phases."""
     bench = run_benchmark(root=root, cases=[EVAL_CASES[0]], export_docx_enabled=False)

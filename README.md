@@ -162,6 +162,64 @@ Dashboard outputs:
 <project>/exports/management/index.html
 ```
 
+## v1.2 governance and one-command pipeline
+
+Artifact manifests capture source/template/domain/generator hashes for auditability:
+
+```bash
+pmo --root ~/pmo-projects manifest <slug>
+```
+
+Manifest output:
+
+```text
+<project>/artifacts/manifest.json
+```
+
+Template governance commands:
+
+```bash
+pmo templates list
+pmo templates validate
+```
+
+One-command pipeline for a new project:
+
+```bash
+pmo --root ~/pmo-projects run-project <slug> \
+  --source ./source.md \
+  --customer "Customer Name" \
+  --product "Product Name" \
+  --llm noop \
+  --profile customer
+```
+
+This runs:
+
+```text
+init → detect-domain → generate all → trace validate → run-gates → export all → index → manifest → summary
+```
+
+Optional final sign-off:
+
+```bash
+pmo --root ~/pmo-projects run-project <slug> --source ./source.md --signoff-final --by "Reviewer"
+```
+
+v1.2 sample benchmark:
+
+```bash
+pmo --root /tmp/pmo-v12 eval --benchmark --samples asset-legaliq-crm --no-docx --llm noop
+```
+
+Expected sample benchmark coverage:
+
+```text
+Asset Management
+LegalIQ
+CRM
+```
+
 ## CLI reference
 
 

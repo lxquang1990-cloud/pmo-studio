@@ -18,7 +18,7 @@ from pmo_studio.exporters.docx_export import export_docx
 from pmo_studio.exporters.bundle import export_bundle
 from pmo_studio.core.manifest import create_baseline, diff_against_baseline
 from pmo_studio.core.change_request import create_change_request
-from pmo_studio.eval.runner import run_eval, run_benchmark
+from pmo_studio.eval.runner import run_eval, run_benchmark, V12_SAMPLE_CASES
 from pmo_studio.llm.factory import build_llm
 from pmo_studio.llm.reviewer import JSONLLMReviewer, build_gate_reviewer
 from pmo_studio.rubrics.loader import ensure_default_rubrics
@@ -34,6 +34,8 @@ from pmo_studio.domain.detector import detect_domain, write_domain_detection
 from pmo_studio.core.dashboard import generate_project_index, generate_review_checklist
 from pmo_studio.core.signoff import update_signoff, load_signoff
 from pmo_studio.generators.source_ba import read_redacted_sources
+from pmo_studio.core.artifact_manifest import write_artifact_manifest
+from pmo_studio.templates.governance import list_versioned_templates, validate_templates
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -375,11 +377,50 @@ def cmd_detect_domain(args):
     print(f"Explanation: {result.explanation}")
     print(f"Written: {out}")
 
+def cmd_manifest(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_artifact_manifest(p.root)
+    print(f"Artifact manifest: {out}")
+
+def cmd_templates(args):
+    if args.action == "list":
+        for row in list_versioned_templates():
+            print(f"{row['id']}	{row['version']}	{row['path']}	{row['size_bytes']} bytes")
+    else:
+        result = validate_templates()
+        print(f"Templates: {'PASS' if result['passed'] else 'FAIL'} version={result['version']}")
+        for check in result['checks']:
+            print(f"- [{'x' if check['passed'] else ' '}] {check['path']}")
+        if not result['passed']:
+            raise SystemExit(1)
+
+def cmd_run_project(args):
+    root = Path(args.root)
+    project_root = root / args.slug
+    if project_root.exists() and not args.force:
+        raise SystemExit(f"Project already exists: {project_root}. Use --force to overwrite.")
+    if project_root.exists() and args.force:
+        import shutil; shutil.rmtree(project_root)
+    p = Project.create(args.slug, customer=args.customer, root_base=root, domain_pack=args.domain_pack)
+    generate_stage0(p, brief=args.brief, products=[args.product], sources=[Path(args.source)])
+    cmd_detect_domain(argparse.Namespace(root=str(root), slug=args.slug))
+    cmd_generate(argparse.Namespace(root=str(root), slug=args.slug, persona='all', from_sources=True, llm=args.llm, model=args.model, refine=args.refine, max_refine=args.max_refine))
+    cmd_trace(argparse.Namespace(root=str(root), slug=args.slug, validate=True))
+    cmd_run_gates(argparse.Namespace(root=str(root), slug=args.slug, include_c=True, llm=args.llm, model=args.model, gate_cache=None, gate_timeout=DEFAULT_GATE_TIMEOUT, gate_fallback=True))
+    cmd_export(argparse.Namespace(root=str(root), slug=args.slug, format='all', profile=args.profile, include_redacted_sources=False, force=False))
+    cmd_index(argparse.Namespace(root=str(root), slug=args.slug))
+    cmd_manifest(argparse.Namespace(root=str(root), slug=args.slug))
+    if args.signoff_final:
+        cmd_signoff(argparse.Namespace(root=str(root), slug=args.slug, role='Final', status='approved', by=args.by, note='run-project final signoff'))
+    cmd_summary(argparse.Namespace(root=str(root), slug=args.slug))
+
 
 def cmd_eval(args):
     eval_root = Path(args.root) / "eval-runs"
     if args.benchmark:
-        result = run_benchmark(eval_root, export_docx_enabled=not args.no_docx,
+        cases = V12_SAMPLE_CASES if args.samples == "asset-legaliq-crm" else None
+        result = run_benchmark(eval_root, cases=cases, export_docx_enabled=not args.no_docx,
                                llm_provider=_resolve_llm_provider(args.llm), llm_model=args.model or DEFAULT_LLM_MODEL)
         print(f"Benchmark {result.name}: {'PASS' if result.passed else 'FAIL'} score={result.score:.2%}")
         print(f"Report: {result.report_path}")
@@ -429,6 +470,28 @@ def build_parser():
     detect = sub.add_parser("detect-domain")
     detect.add_argument("slug", nargs="?")
     detect.set_defaults(func=cmd_detect_domain)
+    man = sub.add_parser("manifest")
+    man.add_argument("slug", nargs="?")
+    man.set_defaults(func=cmd_manifest)
+    tmpl = sub.add_parser("templates")
+    tmpl.add_argument("action", choices=["list", "validate"])
+    tmpl.set_defaults(func=cmd_templates)
+    runp = sub.add_parser("run-project", help="One-command project pipeline")
+    runp.add_argument("slug")
+    runp.add_argument("--source", required=True)
+    runp.add_argument("--customer", default="TBD")
+    runp.add_argument("--product", default="PMO Studio Project")
+    runp.add_argument("--brief", default="Generate a client-ready PMO documentation pack from source.")
+    runp.add_argument("--domain-pack", default="generic")
+    runp.add_argument("--profile", default="customer")
+    runp.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop")
+    runp.add_argument("--model", default=DEFAULT_LLM_MODEL)
+    runp.add_argument("--refine", action=argparse.BooleanOptionalAction, default=False)
+    runp.add_argument("--max-refine", type=int, default=0)
+    runp.add_argument("--signoff-final", action="store_true")
+    runp.add_argument("--by", default="Snail")
+    runp.add_argument("--force", action="store_true")
+    runp.set_defaults(func=cmd_run_project)
     idx = sub.add_parser("index")
     idx.add_argument("slug", nargs="?")
     idx.set_defaults(func=cmd_index)
@@ -513,6 +576,7 @@ def build_parser():
     demo.set_defaults(func=cmd_demo)
     ev = sub.add_parser("eval")
     ev.add_argument("--benchmark", action="store_true", help="Run multi-project benchmark suite")
+    ev.add_argument("--samples", choices=["default", "asset-legaliq-crm"], default="default")
     ev.add_argument("--no-docx", action="store_true", help="Skip DOCX export during benchmark")
     ev.add_argument("--llm", choices=["auto", "noop", "9router"], default=DEFAULT_LLM_PROVIDER)
     ev.add_argument("--model", default=DEFAULT_LLM_MODEL)
