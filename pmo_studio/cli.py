@@ -16,6 +16,7 @@ from pmo_studio.traceability.validator import validate_traceability
 from pmo_studio.exporters.static_html import export_static
 from pmo_studio.exporters.docx_export import export_docx
 from pmo_studio.exporters.bundle import export_bundle
+from pmo_studio.exporters.pdf_export import export_pdf_ready_html
 from pmo_studio.core.manifest import create_baseline, diff_against_baseline
 from pmo_studio.core.change_request import create_change_request
 from pmo_studio.eval.runner import run_eval, run_benchmark, V12_SAMPLE_CASES
@@ -190,6 +191,8 @@ def cmd_export(args):
         outputs.append(export_docx(p.root, profile=args.profile, force=args.force))
     if args.format in {"zip", "all"}:
         outputs.append(export_bundle(p.root, profile=args.profile, include_sources=args.include_redacted_sources, force=args.force))
+    if args.format in {"pdf-html", "all"}:
+        outputs.append(export_pdf_ready_html(p.root, profile=args.profile, force=args.force))
     for path in outputs:
         print(f"Exported: {path}")
 
@@ -504,7 +507,7 @@ def build_parser():
     so.set_defaults(func=cmd_signoff)
     exp = sub.add_parser("export")
     exp.add_argument("slug", nargs="?")
-    exp.add_argument("--format", choices=["html", "docx", "zip", "all"], default="html")
+    exp.add_argument("--format", choices=["html", "docx", "zip", "pdf-html", "all"], default="html")
     exp.add_argument("--profile", default="client-ready")
     exp.add_argument("--include-redacted-sources", action="store_true", help="Include redacted sources in ZIP bundle; originals are never included")
     exp.add_argument("--force", action="store_true", help="Allow explicit re-export after final sign-off lock")

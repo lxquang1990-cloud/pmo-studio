@@ -240,6 +240,34 @@ acceptance_presets:
 
 The render context uses these sections to produce more domain-specific BRD/SRS/AC content while staying offline-first.
 
+## v1.4 professional DOCX and PDF-ready export
+
+DOCX exports include professional document-control sections:
+
+```text
+cover page
+header/footer
+document control table
+approval/sign-off table
+change history
+artifact index
+rendered Markdown tables
+```
+
+PDF generation remains dependency-light by default. PMO Studio emits a print-optimized HTML dashboard that can be converted to PDF by browser/CI tooling:
+
+```bash
+pmo --root ~/pmo-projects export <slug> --format pdf-html --profile customer
+```
+
+Output:
+
+```text
+<project>/exports/customer/pmo-dashboard-print-ready.html
+```
+
+`--format all` also includes this PDF-ready HTML artifact.
+
 ## CLI reference
 
 
