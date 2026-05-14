@@ -1,0 +1,12 @@
+id: asset_management
+label: Asset Management / Quản lý TTB Tài sản
+keywords: [tài sản, tai san, ttb, trang thiết bị, cấp phát, kiểm kê, bảo trì, thanh lý]
+modules: [danh mục tài sản, hồ sơ tài sản, cấp phát, thu hồi, điều chuyển, kiểm kê, bảo trì, thanh lý, báo cáo tài sản]
+roles:
+  AssetManager: Quản lý tài sản
+  DepartmentManager: Quản lý phòng ban
+  Employee: Nhân viên sử dụng tài sản
+  Accounting: Kế toán tài sản
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

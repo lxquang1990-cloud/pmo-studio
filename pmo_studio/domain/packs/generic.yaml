@@ -1,0 +1,14 @@
+id: generic
+label: Generic Source-driven
+keywords: []
+modules:
+  - core workspace
+  - workflow
+  - report/export
+roles:
+  Admin: System administrator
+  BusinessUser: Business user
+  Approver: Approval user
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

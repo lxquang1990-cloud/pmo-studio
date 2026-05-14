@@ -1,0 +1,12 @@
+id: crm
+label: CRM / Sales Pipeline
+keywords: [crm, lead, opportunity, customer, sales pipeline, sales forecast, account]
+modules: [quản lý lead, opportunity, customer, sales pipeline, campaign, forecast]
+roles:
+  Sales: Sales representative
+  SalesManager: Sales manager
+  AccountManager: Account manager
+  CustomerService: Customer service
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

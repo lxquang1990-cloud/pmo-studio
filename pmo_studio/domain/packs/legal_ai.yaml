@@ -1,0 +1,12 @@
+id: legal_ai
+label: Legal AI / LegalIQ
+keywords: [legaliq, pháp lý, phap ly, ủy quyền, uy quyen, hợp đồng, hop dong, b.pctt, thẩm định]
+modules: [hỏi đáp pháp lý, faq, ai trả lời, quản lý ủy quyền, hợp đồng, thẩm định, báo cáo pháp lý, rbac]
+roles:
+  LegalOfficer: B.PCTT / Legal Officer
+  BusinessUser: Người dùng nội bộ
+  Approver: Người phê duyệt
+  Admin: Quản trị hệ thống
+quotation_defaults:
+  risk_level: detailed
+  manday_rate_vnd: 3900000

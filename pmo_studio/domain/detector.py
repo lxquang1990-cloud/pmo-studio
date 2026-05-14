@@ -28,6 +28,26 @@ class DomainDetectionResult:
         return asdict(self)
 
 
+def _load_profiles() -> dict:
+    try:
+        from pmo_studio.domain.pack_loader import list_domain_packs, load_domain_pack
+        profiles = {}
+        for pack_id in list_domain_packs():
+            pack = load_domain_pack(pack_id)
+            if pack.id == "generic":
+                continue
+            profiles[pack.id] = {
+                "keywords": pack.keywords,
+                "modules": pack.modules,
+                "roles": list(pack.roles.values()) + list(pack.roles.keys()),
+            }
+        if profiles:
+            return profiles
+    except Exception:
+        pass
+    return DOMAIN_PROFILES
+
+
 DOMAIN_PROFILES = {
     "asset_management": {
         "keywords": ["tài sản", "tai san", "ttb", "trang thiết bị", "cap phat", "cấp phát", "kiểm kê", "kiem ke", "thanh lý", "bao tri", "bảo trì"],
@@ -70,7 +90,7 @@ DOMAIN_PROFILES = {
 def detect_domain(source_text: str, *, project_slug: str = "", customer: str = "") -> DomainDetectionResult:
     haystack = _normalize("\n".join([project_slug, customer, source_text or ""]))
     candidates: list[DomainCandidate] = []
-    for domain, profile in DOMAIN_PROFILES.items():
+    for domain, profile in _load_profiles().items():
         kw = _matches(haystack, profile["keywords"])
         modules = _matches(haystack, profile["modules"])
         roles = _matches(haystack, profile["roles"])
