@@ -38,7 +38,7 @@ from pmo_studio.generators.source_ba import read_redacted_sources
 from pmo_studio.core.artifact_manifest import write_artifact_manifest
 from pmo_studio.templates.governance import list_versioned_templates, validate_templates
 from pmo_studio.domain.manager import list_domains, inspect_domain, validate_domain, scaffold_domain, benchmark_domain, update_domain, export_domain, import_domain
-from pmo_studio.integrations.telegram_workflow import build_delivery_manifest
+from pmo_studio.integrations.telegram_workflow import build_delivery_manifest, ingest_inbound, run_session, load_session
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -428,7 +428,18 @@ def cmd_web(args):
     run_web(Path(args.root), host=args.host, port=args.port)
 
 def cmd_telegram(args):
-    if args.action == "prepare":
+    if args.action == "ingest":
+        result = ingest_inbound(Path(args.root), args.chat_id, message_id=args.message_id, source_path=args.source, text=args.text, slug=args.slug, customer=args.customer, product=args.product)
+        print(result['prompt'])
+        print(f"State: {result['state']}")
+        print(f"Session: {result['session_path']}")
+    elif args.action == "run-session":
+        out = run_session(Path(args.root), args.chat_id, llm=args.llm, force=args.force)
+        print(f"Telegram delivery manifest: {out}")
+    elif args.action == "session":
+        import json
+        print(json.dumps(load_session(Path(args.root), args.chat_id).__dict__, ensure_ascii=False, indent=2))
+    elif args.action == "prepare":
         run_args = argparse.Namespace(
             root=args.root, slug=args.slug, source=args.source, customer=args.customer, product=args.product,
             brief=args.brief, domain_pack=args.domain_pack, profile="customer", llm=args.llm, model=args.model,
@@ -643,6 +654,12 @@ def build_parser():
     web.set_defaults(func=cmd_web)
     tg = sub.add_parser("telegram", help="Prepare Telegram delivery manifests without sending tokens/messages")
     tg_sub = tg.add_subparsers(dest="action", required=True)
+    ting = tg_sub.add_parser("ingest")
+    ting.add_argument("--chat-id", required=True); ting.add_argument("--message-id", default=None); ting.add_argument("--source", default=None); ting.add_argument("--text", default=None); ting.add_argument("--slug", default=None); ting.add_argument("--customer", default=None); ting.add_argument("--product", default=None); ting.set_defaults(func=cmd_telegram)
+    trun = tg_sub.add_parser("run-session")
+    trun.add_argument("--chat-id", required=True); trun.add_argument("--llm", choices=["auto", "noop", "9router"], default="noop"); trun.add_argument("--force", action="store_true"); trun.set_defaults(func=cmd_telegram)
+    tses = tg_sub.add_parser("session")
+    tses.add_argument("--chat-id", required=True); tses.set_defaults(func=cmd_telegram)
     tprep = tg_sub.add_parser("prepare")
     tprep.add_argument("slug"); tprep.add_argument("--source", required=True); tprep.add_argument("--customer", default="TBD"); tprep.add_argument("--product", default="PMO Studio Project")
     tprep.add_argument("--brief", default="Generate a client-ready PMO documentation pack from Telegram inbound source.")

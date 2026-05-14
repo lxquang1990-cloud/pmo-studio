@@ -329,6 +329,19 @@ Delivery manifest:
 
 The manifest lists individual files to send, including DOCX, PDF, quotation XLSX, bundle ZIP, dashboard HTML, and artifact manifest. Individual file delivery is preferred when ZIP upload is unreliable.
 
+## v2.3 Real Telegram Bot Workflow
+
+PMO Studio now has a stateful Telegram workflow engine for provider adapters such as OpenClaw. It stores session state per chat, asks for missing metadata, runs the PMO pipeline, and returns a delivery manifest. It still does not store bot tokens or send provider messages directly.
+
+```bash
+pmo telegram ingest --chat-id telegram:640968010 --source ./brief.md
+pmo telegram ingest --chat-id telegram:640968010 --slug crm-demo --customer "Customer" --product "CRM"
+pmo telegram run-session --chat-id telegram:640968010 --llm noop --force
+pmo telegram session --chat-id telegram:640968010
+```
+
+Session files are stored under `<root>/_telegram_sessions/`. Generated delivery manifests list individual DOCX/PDF/XLSX/ZIP/dashboard/manifest attachments for robust Telegram delivery.
+
 ## v2.2 Domain Pack Studio
 
 Domain Pack Studio adds UI and CLI support for domain pack lifecycle management.
