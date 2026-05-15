@@ -1,0 +1,3 @@
+domain: asset_management
+must_have_features: [Cấp phát tài sản, Kỳ kiểm kê tài sản, Phiếu bảo trì/sửa chữa]
+blocked_features: [Opportunity pipeline, Tiếp nhận văn bản đến]

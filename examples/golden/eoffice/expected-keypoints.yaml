@@ -1,0 +1,3 @@
+domain: eoffice
+must_have_features: [Tiếp nhận văn bản đến, Soạn thảo và phát hành văn bản đi, Phân công và xử lý công việc]
+blocked_features: [Opportunity pipeline, Cấp phát tài sản]

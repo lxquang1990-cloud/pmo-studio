@@ -34,3 +34,56 @@ acceptance_presets:
   - Unauthorized users cannot view restricted documents
   - Overdue workflow tasks are visible in dashboard
   - Released documents are immutable except authorized revision flow
+
+capabilities_v2:
+  - name: Quản lý văn bản
+    description: Quản lý văn bản đến/đi, metadata, file đính kèm và phân loại hồ sơ.
+    features:
+      - name: Tiếp nhận văn bản đến
+        description: Ghi nhận văn bản đến, số ký hiệu, đơn vị gửi, độ mật/khẩn và file đính kèm.
+        complexity: Medium
+        manday: 5
+        inputs: [số văn bản, đơn vị gửi, ngày nhận, độ mật/khẩn, file đính kèm]
+        outputs: [hồ sơ văn bản đến, mã/số vào sổ]
+        validations: [số vào sổ không trùng, file đính kèm đúng định dạng]
+        permissions: [Văn thư tạo văn bản đến, Chuyên viên xem theo phân công]
+        audit_events: [tiếp nhận văn bản, cập nhật metadata]
+        business_rules: [văn bản mật chỉ hiển thị theo phân quyền]
+      - name: Soạn thảo và phát hành văn bản đi
+        description: Soạn thảo dự thảo, trình duyệt, ký và phát hành văn bản đi.
+        complexity: Complex
+        manday: 7
+        inputs: [dự thảo, nơi nhận, luồng duyệt, file ký]
+        outputs: [văn bản phát hành, lịch sử xử lý]
+        validations: [văn bản chỉ phát hành sau khi được duyệt/ký]
+        permissions: [Chuyên viên soạn thảo, Lãnh đạo duyệt/ký, Văn thư phát hành]
+        audit_events: [trình duyệt, phê duyệt, ký, phát hành]
+        business_rules: [văn bản đã phát hành là immutable trừ quy trình đính chính]
+  - name: Luồng xử lý và lưu trữ
+    description: Phân công, theo dõi xử lý, SLA và lưu trữ tra cứu văn bản.
+    features:
+      - name: Phân công và xử lý công việc
+        description: Phân công xử lý văn bản, theo dõi hạn xử lý, ý kiến và kết quả.
+        complexity: Complex
+        manday: 7
+        inputs: [văn bản, người xử lý, hạn xử lý, ý kiến chỉ đạo]
+        outputs: [task xử lý, trạng thái, nhắc hạn]
+        validations: [người xử lý phải thuộc phạm vi phân quyền]
+        permissions: [Lãnh đạo phân công, Chuyên viên xử lý]
+        audit_events: [phân công, cập nhật kết quả xử lý]
+        business_rules: [task quá hạn phải hiển thị trên dashboard]
+      - name: Tra cứu và lưu trữ văn bản
+        description: Tìm kiếm văn bản theo metadata, nội dung và trạng thái lưu trữ.
+        complexity: Medium
+        manday: 5
+        inputs: [từ khóa, loại văn bản, ngày, trạng thái, đơn vị]
+        outputs: [kết quả tra cứu, hồ sơ lưu trữ]
+        validations: [không trả về văn bản vượt quyền xem]
+        permissions: [người dùng xem theo phân quyền, Văn thư quản lý lưu trữ]
+        audit_events: [export danh sách văn bản]
+        business_rules: [văn bản mật/khẩn tuân thủ ma trận phân quyền]
+data_entities: [IncomingDocument, OutgoingDocument, Attachment, WorkflowTask, ApprovalStep, ArchiveRecord, AuditLog]
+assumptions: [Ma trận phân quyền và luồng ký được xác nhận trong workshop, Nhà cung cấp chữ ký số cung cấp API/SDK hợp lệ]
+out_of_scope: [OCR/AI extraction nâng cao nếu chưa xác nhận, Migration toàn bộ kho văn bản lịch sử nếu chưa estimate riêng]
+allowed_terms: [workflow, digital signature, API, SLA, dashboard, audit log, UAT]
+blocked_terms: [RFID, asset allocation, opportunity forecast]

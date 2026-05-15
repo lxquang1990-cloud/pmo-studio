@@ -454,7 +454,7 @@ def cmd_web(args):
     run_web(Path(args.root), host=args.host, port=args.port)
 
 def cmd_quality_v3(args):
-    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"Quality v3: {write_quality_v3(p.root)}")
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"Quality v3: {write_quality_v3(p.root, scope=args.scope)}")
 
 def cmd_model_srs(args):
     args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"SRS: {generate_srs_from_model(p, args.lang)}")
@@ -754,7 +754,7 @@ def build_parser():
     muat = sub.add_parser("model-uat", help="Run v3.7 UAT Pack from BA Model"); muat.add_argument("slug", nargs="?"); muat.add_argument("--lang", default="vi"); muat.set_defaults(func=cmd_model_uat)
     mq = sub.add_parser("model-quote", help="Run v3.8 Quotation from BA Model"); mq.add_argument("slug", nargs="?"); mq.add_argument("--lang", default="vi"); mq.set_defaults(func=cmd_model_quote)
     mex = sub.add_parser("export-customer-model", help="Export customer pack from BA Model"); mex.add_argument("slug", nargs="?"); mex.add_argument("--lang", default="vi"); mex.set_defaults(func=cmd_export_customer_model)
-    q3 = sub.add_parser("quality-v3", help="Run v3.9 anti-generic quality gate"); q3.add_argument("slug", nargs="?"); q3.set_defaults(func=cmd_quality_v3)
+    q3 = sub.add_parser("quality-v3", help="Run v3.9 anti-generic quality gate"); q3.add_argument("slug", nargs="?"); q3.add_argument("--scope", choices=["all","customer"], default="all"); q3.set_defaults(func=cmd_quality_v3)
     dec = sub.add_parser("decompose", help="Run v3.0 Functional Decomposition Engine")
     dec.add_argument("slug", nargs="?"); dec.set_defaults(func=cmd_decompose)
     gd = sub.add_parser("generate-decomp", help="Run v3.1 decomposition-driven generation")

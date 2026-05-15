@@ -6,6 +6,7 @@ from docx import Document
 from docx.shared import Pt
 from pmo_studio.model.builder import load_ba_model
 from pmo_studio.model.schema import BAModel
+from pmo_studio.model.translation import model_to_language
 from pmo_studio.generators.quotation import QuotationInput, HangMuc, SubSystem, Feature as QFeature, ScreenRow, OutOfScreenItem, Assumption, generate_quotation_xlsx, MANDAY_RATE_VND
 
 def ensure_model(project):
@@ -16,20 +17,25 @@ def ensure_model(project):
     return load_ba_model(project.root)
 
 def generate_srs_from_model(project, lang='vi')->Path:
-    m=ensure_model(project); out=project.root/f'artifacts/ba/03-srs/srs-customer-ready.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
-    lines=[f'# SRS Customer-ready — {m.project.product or m.project.slug}','',f'## 1. Giới thiệu','Tài liệu mô tả yêu cầu phần mềm được sinh từ Canonical BA Model, áp dụng cho domain '+m.domain.label+'.','', '## 2. Phạm vi','### In scope', *[f'- {c.name}' for c in m.capabilities], '', '### Out of scope', *[f'- {x}' for x in m.out_of_scope], '', '## 3. Vai trò người dùng', *[f'- **{r.name}**: {r.description or "Vai trò nghiệp vụ trong hệ thống."}' for r in m.roles], '', '## 4. Yêu cầu chức năng']
+    m=model_to_language(ensure_model(project), lang); out=project.root/f'artifacts/ba/03-srs/srs-customer-ready.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
+    title = 'SRS Customer-ready' if lang == 'en' else 'SRS Customer-ready'
+    intro = 'Introduction' if lang == 'en' else 'Giới thiệu'
+    scope = 'Scope' if lang == 'en' else 'Phạm vi'
+    roles_label = 'User Roles' if lang == 'en' else 'Vai trò người dùng'
+    func_label = 'Functional Requirements' if lang == 'en' else 'Yêu cầu chức năng'
+    lines=[f'# {title} — {m.project.product or m.project.slug}','',f'## 1. {intro}',('This Software Requirements Specification is generated from the Canonical BA Model and applies to domain '+m.domain.label+'.') if lang=='en' else ('Tài liệu mô tả yêu cầu phần mềm được sinh từ Canonical BA Model, áp dụng cho domain '+m.domain.label+'.'),'', f'## 2. {scope}','### In scope', *[f'- {c.name}' for c in m.capabilities], '', '### Out of scope', *[f'- {x}' for x in m.out_of_scope], '', f'## 3. {roles_label}', *[f'- **{r.name}**: {r.description or "Vai trò nghiệp vụ trong hệ thống."}' for r in m.roles], '', f'## 4. {func_label}']
     for cap in m.capabilities:
         lines += ['', f'### {cap.id} — {cap.name}']
         for req in [r for r in m.requirements if any(f.id==r.feature_id and f.capability_id==cap.id for f in m.features)]:
-            lines += ['', f'#### {req.id} — {req.name}', req.description, '', '**Vai trò sử dụng:** '+', '.join(req.actor_roles), '**Đầu vào:** '+', '.join(req.inputs), '**Xử lý:** '+req.process, '**Đầu ra:** '+', '.join(req.outputs), '**Business Rules:**', *[f'- {x}' for x in req.business_rules], '**Validation:**', *[f'- {x}' for x in req.validation_rules], '**Permission:**', *[f'- {x}' for x in req.permission_rules], '**Audit:**', *[f'- {x}' for x in req.audit_events], '**Acceptance Criteria:**']
+            lines += ['', f'#### {req.id} — {req.name}', req.description, '', ('**User Roles:** ' if lang=='en' else '**Vai trò sử dụng:** ')+', '.join(req.actor_roles), ('**Inputs:** ' if lang=='en' else '**Đầu vào:** ')+', '.join(req.inputs), ('**Process:** ' if lang=='en' else '**Xử lý:** ')+req.process, ('**Outputs:** ' if lang=='en' else '**Đầu ra:** ')+', '.join(req.outputs), '**Business Rules:**', *[f'- {x}' for x in req.business_rules], '**Validation:**', *[f'- {x}' for x in req.validation_rules], '**Permission:**', *[f'- {x}' for x in req.permission_rules], '**Audit:**', *[f'- {x}' for x in req.audit_events], '**Acceptance Criteria:**']
             for ac in [a for a in m.acceptance_criteria if a.requirement_id==req.id]: lines.append(f'- {ac.id}: Given {ac.given}, When {ac.when}, Then {ac.then}.')
-    lines += ['', '## 5. Tích hợp', *[f'- {x}' for x in m.integrations], '', '## 6. Non-functional Requirements', '- RBAC/permission theo vai trò.', '- Audit log cho thao tác quan trọng.', '- Import/export có kiểm soát quyền và dữ liệu.', '- Dữ liệu cần backup/restore theo chính sách vận hành.', '', '## 7. Assumptions', *[f'- {x}' for x in m.assumptions], '', '## 8. Traceability Matrix', '| REQ | Feature | Capability |', '|---|---|---|']
+    lines += ['', '## 5. Integrations' if lang=='en' else '## 5. Tích hợp', *[f'- {x}' for x in m.integrations], '', '## 6. Non-functional Requirements', '- RBAC/permission theo vai trò.', '- Audit log cho thao tác quan trọng.', '- Import/export có kiểm soát quyền và dữ liệu.', '- Dữ liệu cần backup/restore theo chính sách vận hành.', '', '## 7. Assumptions', *[f'- {x}' for x in m.assumptions], '', '## 8. Traceability Matrix', '| REQ | Feature | Capability |', '|---|---|---|']
     for req in m.requirements:
         feat=next(f for f in m.features if f.id==req.feature_id); cap=next(c for c in m.capabilities if c.id==feat.capability_id); lines.append(f'| {req.id} | {feat.id} {feat.name} | {cap.id} {cap.name} |')
     out.write_text('\n'.join(lines)+'\n',encoding='utf-8'); _docx(out, project.root/f'exports/customer/{lang}/srs-customer-ready.docx'); return out
 
 def generate_stories_from_model(project, lang='vi')->Path:
-    m=ensure_model(project); out=project.root/f'artifacts/ba/04-us/user-stories.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=model_to_language(ensure_model(project), lang); out=project.root/f'artifacts/ba/04-us/user-stories.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
     lines=[f'# User Stories & Acceptance Criteria — {m.project.product or m.project.slug}','']
     for us in m.user_stories:
         feat=next(f for f in m.features if f.id==us.feature_id)
@@ -39,7 +45,7 @@ def generate_stories_from_model(project, lang='vi')->Path:
     out.write_text('\n'.join(lines),encoding='utf-8'); _docx(out, project.root/f'exports/customer/{lang}/user-stories.docx'); return out
 
 def generate_uat_from_model(project, lang='vi')->Path:
-    m=ensure_model(project); out=project.root/f'exports/customer/{lang}/uat-pack/test-cases-uat.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=model_to_language(ensure_model(project), lang); out=project.root/f'exports/customer/{lang}/uat-pack/test-cases-uat.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
     wb=Workbook(); ws=wb.active; ws.title='Test Cases'; headers=['TC ID','Module/Capability','Linked REQ','Linked US','Linked AC','Role','Priority','Precondition','Test Data','Steps','Expected Result','Actual Result','Status','Evidence','Owner']; _header(ws,headers)
     for tc in m.test_cases:
         req=next(r for r in m.requirements if r.id==tc.requirement_id); feat=next(f for f in m.features if f.id==req.feature_id); cap=next(c for c in m.capabilities if c.id==feat.capability_id)
@@ -52,7 +58,7 @@ def generate_uat_from_model(project, lang='vi')->Path:
     wb.save(out); return out
 
 def generate_quote_from_model(project, lang='vi')->Path:
-    m=ensure_model(project); out=project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=model_to_language(ensure_model(project), lang); out=project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
     subs=[]
     for cap in m.capabilities:
         qfs=[]

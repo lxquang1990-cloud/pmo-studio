@@ -1,0 +1,3 @@
+domain: crm
+must_have_features: [Lead capture và qualification, Opportunity pipeline, Phê duyệt chiết khấu]
+blocked_features: [Cấp phát tài sản, Tiếp nhận văn bản đến]

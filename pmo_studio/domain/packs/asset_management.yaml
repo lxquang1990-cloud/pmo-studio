@@ -34,3 +34,89 @@ acceptance_presets:
   - asset_code is system generated
   - Unauthorized transfer is blocked and audited
   - Inventory discrepancy requires reconciliation note
+
+capabilities_v2:
+  - name: Quản lý danh mục tài sản
+    description: Quản lý hồ sơ, phân loại, mã hóa và tra cứu tài sản/TTB.
+    features:
+      - name: Danh sách/tra cứu tài sản
+        description: Tìm kiếm, lọc và xem danh sách tài sản theo mã, serial, nhóm, phòng ban, người sử dụng và trạng thái.
+        complexity: Medium
+        manday: 4
+        inputs: [mã tài sản, serial, nhóm tài sản, phòng ban, người sử dụng, trạng thái]
+        outputs: [danh sách tài sản, bộ lọc đã áp dụng, file export nếu có]
+        validations: [điều kiện lọc ngày phải hợp lệ, người dùng chỉ xem dữ liệu theo quyền]
+        permissions: [Asset Manager xem toàn bộ, Department Manager xem theo phòng ban, Auditor chỉ xem]
+        audit_events: [export danh sách tài sản]
+        business_rules: [mỗi tài sản có một mã duy nhất, trạng thái tài sản phải phản ánh vòng đời hiện tại]
+      - name: Hồ sơ tài sản
+        description: Tạo và cập nhật thông tin chi tiết tài sản gồm mã, serial, nhóm, ngày mua, giá trị, vị trí và người sử dụng.
+        complexity: Medium
+        manday: 5
+        inputs: [thông tin tài sản, nhóm tài sản, phòng ban, chứng từ đính kèm]
+        outputs: [hồ sơ tài sản, lịch sử cập nhật]
+        validations: [mã tài sản/serial không được trùng, trường bắt buộc phải đầy đủ]
+        permissions: [chỉ Asset Manager hoặc Admin được tạo/sửa hồ sơ]
+        audit_events: [tạo tài sản, cập nhật tài sản]
+        business_rules: [tài sản đã thanh lý không được chỉnh sửa nghiệp vụ cấp phát]
+      - name: Import/export tài sản
+        description: Import danh sách tài sản từ Excel, validate từng dòng và export dữ liệu theo quyền.
+        complexity: Complex
+        manday: 6
+        inputs: [file Excel import, mapping cột, điều kiện export]
+        outputs: [kết quả import, danh sách lỗi, file export]
+        validations: [file đúng template, lỗi từng dòng phải được báo rõ, dòng hợp lệ vẫn có thể được xử lý nếu cấu hình cho phép]
+        permissions: [chỉ vai trò được phân quyền mới import/export]
+        audit_events: [import tài sản, export tài sản]
+        business_rules: [import không được tạo trùng mã tài sản]
+  - name: Quản lý vòng đời tài sản
+    description: Quản lý cấp phát, bàn giao, thu hồi và điều chuyển tài sản.
+    features:
+      - name: Cấp phát tài sản
+        description: Lập phiếu cấp phát tài sản khả dụng cho nhân sự hoặc phòng ban.
+        complexity: Complex
+        manday: 6
+        inputs: [tài sản khả dụng, người nhận, ngày cấp phát, biên bản]
+        outputs: [phiếu cấp phát, trạng thái tài sản đã cấp phát, lịch sử nắm giữ]
+        validations: [chỉ tài sản Available được cấp phát, người nhận phải hợp lệ]
+        permissions: [Asset Manager lập phiếu, Department Manager xác nhận nếu cấu hình yêu cầu]
+        audit_events: [lập phiếu cấp phát, xác nhận cấp phát]
+        business_rules: [một tài sản chỉ có một người giữ hiện tại]
+      - name: Thu hồi/điều chuyển tài sản
+        description: Thu hồi tài sản từ người dùng hoặc điều chuyển sang người dùng/phòng ban khác.
+        complexity: Complex
+        manday: 6
+        inputs: [tài sản đang cấp phát, người trả/người nhận mới, lý do, biên bản]
+        outputs: [phiếu thu hồi/điều chuyển, trạng thái mới, lịch sử biến động]
+        validations: [không được điều chuyển tài sản đang bảo trì/thanh lý, phải có lý do]
+        permissions: [Asset Manager thao tác, Department Manager xác nhận theo quyền]
+        audit_events: [thu hồi tài sản, điều chuyển tài sản]
+        business_rules: [mọi biến động người giữ phải lưu lịch sử]
+  - name: Kiểm kê và bảo trì
+    description: Quản lý kỳ kiểm kê, chênh lệch và ticket bảo trì/sửa chữa.
+    features:
+      - name: Kỳ kiểm kê tài sản
+        description: Tạo kỳ kiểm kê theo phạm vi phòng ban/vị trí và ghi nhận kết quả thực tế.
+        complexity: Complex
+        manday: 7
+        inputs: [phạm vi kiểm kê, danh sách tài sản, kết quả thực tế, minh chứng]
+        outputs: [biên bản kiểm kê, danh sách chênh lệch, trạng thái reconciliation]
+        validations: [chênh lệch phải có ghi chú xử lý, minh chứng bắt buộc nếu thiếu/mất]
+        permissions: [Asset Manager tạo kỳ, Department Manager xác nhận kết quả]
+        audit_events: [tạo kỳ kiểm kê, xác nhận kiểm kê, xử lý chênh lệch]
+        business_rules: [kỳ kiểm kê đã đóng không được sửa kết quả nếu không mở lại có quyền]
+      - name: Phiếu bảo trì/sửa chữa
+        description: Ghi nhận yêu cầu bảo trì/sửa chữa, theo dõi trạng thái và chi phí liên quan.
+        complexity: Medium
+        manday: 5
+        inputs: [tài sản, mô tả lỗi, đơn vị xử lý, chi phí, chứng từ]
+        outputs: [ticket bảo trì, trạng thái xử lý, lịch sử chi phí]
+        validations: [tài sản thanh lý không được tạo bảo trì mới]
+        permissions: [Staff tạo yêu cầu, Asset Manager xử lý]
+        audit_events: [tạo ticket bảo trì, cập nhật trạng thái]
+        business_rules: [tài sản đang bảo trì không được cấp phát mới]
+data_entities: [Asset, AssetCategory, Department, Employee, AllocationVoucher, InventoryCampaign, MaintenanceTicket, LiquidationRequest, AuditLog]
+assumptions: [Dữ liệu nhân sự/phòng ban được cung cấp hoặc tích hợp qua API/Excel, Quy trình phê duyệt chi tiết sẽ được xác nhận trong workshop]
+out_of_scope: [Mobile native app, RFID realtime nếu chưa có thiết bị/API, Tích hợp kế toán realtime nếu chưa có contract]
+allowed_terms: [API, workflow, audit log, dashboard, import, export, UAT, go-live, validation, permission]
+blocked_terms: [LegalIQ, AI citation, hợp đồng pháp lý, legal digital signature]

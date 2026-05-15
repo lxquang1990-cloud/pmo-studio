@@ -35,3 +35,56 @@ acceptance_presets:
   - Lead duplicate check runs before create
   - Opportunity forecast updates by probability
   - Discount approval follows threshold
+
+capabilities_v2:
+  - name: Quản lý khách hàng và lead
+    description: Quản lý lead, khách hàng, liên hệ và lịch sử tương tác.
+    features:
+      - name: Lead capture và qualification
+        description: Tạo lead từ nguồn nhập liệu, phân loại chất lượng và gán phụ trách.
+        complexity: Medium
+        manday: 5
+        inputs: [thông tin lead, nguồn lead, ngành nghề, nhu cầu]
+        outputs: [lead record, điểm/nhãn qualification, người phụ trách]
+        validations: [kiểm tra trùng email/điện thoại, trường liên hệ bắt buộc]
+        permissions: [Sales tạo lead, Sales Manager phân bổ lead]
+        audit_events: [tạo lead, gán lead]
+        business_rules: [lead trùng phải được cảnh báo trước khi tạo mới]
+      - name: Hồ sơ khách hàng
+        description: Quản lý thông tin account/customer, contact, lịch sử chăm sóc và ghi chú.
+        complexity: Medium
+        manday: 5
+        inputs: [thông tin khách hàng, contact, ghi chú tương tác]
+        outputs: [customer profile, activity timeline]
+        validations: [mã khách hàng/email chính không trùng]
+        permissions: [Account Manager cập nhật, Customer Service ghi nhận tương tác]
+        audit_events: [cập nhật hồ sơ khách hàng]
+        business_rules: [dữ liệu khách hàng phải có owner rõ ràng]
+  - name: Sales Pipeline
+    description: Quản lý opportunity, stage, forecast và phê duyệt chiết khấu.
+    features:
+      - name: Opportunity pipeline
+        description: Theo dõi cơ hội bán hàng theo stage, giá trị dự kiến, xác suất và ngày chốt.
+        complexity: Complex
+        manday: 7
+        inputs: [customer, deal value, stage, probability, close date]
+        outputs: [opportunity, forecast amount, stage history]
+        validations: [stage transition phải hợp lệ, close date không được rỗng với stage cuối]
+        permissions: [Sales cập nhật opportunity của mình, Sales Manager xem team]
+        audit_events: [đổi stage opportunity, cập nhật forecast]
+        business_rules: [forecast = deal value x probability]
+      - name: Phê duyệt chiết khấu
+        description: Tạo yêu cầu phê duyệt chiết khấu khi vượt ngưỡng cấu hình.
+        complexity: Complex
+        manday: 6
+        inputs: [deal, mức chiết khấu, lý do]
+        outputs: [approval request, quyết định phê duyệt]
+        validations: [chiết khấu vượt ngưỡng phải có phê duyệt]
+        permissions: [Sales gửi yêu cầu, Sales Manager phê duyệt theo ngưỡng]
+        audit_events: [gửi phê duyệt chiết khấu, phê duyệt/từ chối]
+        business_rules: [deal chưa được phê duyệt không được chuyển sang won nếu discount vượt ngưỡng]
+data_entities: [Lead, Customer, Contact, Opportunity, Activity, ApprovalRequest, Campaign, AuditLog]
+assumptions: [Quy trình stage và ngưỡng chiết khấu được customer xác nhận, Dữ liệu khách hàng hiện hữu được chuẩn hóa trước migration]
+out_of_scope: [Marketing automation nâng cao nếu chưa có API, Billing/ERP realtime nếu chưa có contract]
+allowed_terms: [CRM, lead, opportunity, pipeline, forecast, API, dashboard, import, export, UAT]
+blocked_terms: [RFID, kiểm kê tài sản, văn bản đến]
