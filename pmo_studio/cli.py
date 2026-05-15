@@ -51,6 +51,7 @@ from pmo_studio.decomposition.review import write_decomposition_review
 from pmo_studio.model.builder import write_ba_model
 from pmo_studio.model.generators import generate_srs_from_model, generate_stories_from_model, generate_uat_from_model, generate_quote_from_model, export_customer_from_model
 from pmo_studio.model.quality import write_quality_v3
+from pmo_studio.model.delivery_pack import export_delivery_pack
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -473,6 +474,12 @@ def cmd_export_customer_model(args):
     outputs = export_customer_from_model(p, args.lang)
     for k,v in outputs.items(): print(f"{k}: {v}")
 
+def cmd_delivery_pack(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root));
+    out = export_delivery_pack(p, args.lang, make_zip=not args.no_zip)
+    print(f"Delivery manifest: {out}")
+    print(f"Delivery folder: {out.parent}")
+
 def cmd_build_model(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -754,6 +761,7 @@ def build_parser():
     muat = sub.add_parser("model-uat", help="Run v3.7 UAT Pack from BA Model"); muat.add_argument("slug", nargs="?"); muat.add_argument("--lang", default="vi"); muat.set_defaults(func=cmd_model_uat)
     mq = sub.add_parser("model-quote", help="Run v3.8 Quotation from BA Model"); mq.add_argument("slug", nargs="?"); mq.add_argument("--lang", default="vi"); mq.set_defaults(func=cmd_model_quote)
     mex = sub.add_parser("export-customer-model", help="Export customer pack from BA Model"); mex.add_argument("slug", nargs="?"); mex.add_argument("--lang", default="vi"); mex.set_defaults(func=cmd_export_customer_model)
+    dp = sub.add_parser("delivery-pack", help="Export standardized customer delivery pack with manifest/hash"); dp.add_argument("slug", nargs="?"); dp.add_argument("--lang", default="vi"); dp.add_argument("--no-zip", action="store_true"); dp.set_defaults(func=cmd_delivery_pack)
     q3 = sub.add_parser("quality-v3", help="Run v3.9 anti-generic quality gate"); q3.add_argument("slug", nargs="?"); q3.add_argument("--scope", choices=["all","customer"], default="all"); q3.set_defaults(func=cmd_quality_v3)
     dec = sub.add_parser("decompose", help="Run v3.0 Functional Decomposition Engine")
     dec.add_argument("slug", nargs="?"); dec.set_defaults(func=cmd_decompose)
