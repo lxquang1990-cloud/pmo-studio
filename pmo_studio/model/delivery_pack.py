@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from importlib.metadata import version, PackageNotFoundError
 from pmo_studio.model.generators import export_customer_from_model, ensure_model
+from pmo_studio.model.detailed_quotation import generate_detailed_quotation
 from pmo_studio.model.quality import write_quality_v3
 
 @dataclass
@@ -34,6 +35,7 @@ class DeliveryManifest:
 def export_delivery_pack(project, lang: str = 'vi', *, make_zip: bool = True) -> Path:
     model = ensure_model(project)
     outputs = export_customer_from_model(project, lang)
+    generate_detailed_quotation(project, lang)
     quality_json = write_quality_v3(project.root, scope='customer')
     model_path = project.root/'artifacts/model/ba-model.json'
     model_hash = _sha256(model_path)
