@@ -48,6 +48,9 @@ from pmo_studio.quality.consistency_engine import write_consistency_report
 from pmo_studio.decomposition.engine import write_decomposition
 from pmo_studio.decomposition.generation import generate_from_decomposition
 from pmo_studio.decomposition.review import write_decomposition_review
+from pmo_studio.model.builder import write_ba_model
+from pmo_studio.model.generators import generate_srs_from_model, generate_stories_from_model, generate_uat_from_model, generate_quote_from_model, export_customer_from_model
+from pmo_studio.model.quality import write_quality_v3
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -450,6 +453,32 @@ def cmd_web(args):
     from pmo_studio.webapp import run_web
     run_web(Path(args.root), host=args.host, port=args.port)
 
+def cmd_quality_v3(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"Quality v3: {write_quality_v3(p.root)}")
+
+def cmd_model_srs(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"SRS: {generate_srs_from_model(p, args.lang)}")
+
+def cmd_model_stories(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"Stories: {generate_stories_from_model(p, args.lang)}")
+
+def cmd_model_uat(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"UAT: {generate_uat_from_model(p, args.lang)}")
+
+def cmd_model_quote(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root)); print(f"Quotation: {generate_quote_from_model(p, args.lang)}")
+
+def cmd_export_customer_model(args):
+    args.slug = _resolve_slug(args); p = Project.load(args.slug, root_base=Path(args.root));
+    outputs = export_customer_from_model(p, args.lang)
+    for k,v in outputs.items(): print(f"{k}: {v}")
+
+def cmd_build_model(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_ba_model(p)
+    print(f"BA model: {out}")
+
 def cmd_decomposition_review(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -718,6 +747,14 @@ def build_parser():
     qi.add_argument("slug", nargs="?"); qi.set_defaults(func=cmd_quality)
     crv = sub.add_parser("customer-review", help="Run customer-ready review mode")
     crv.add_argument("slug", nargs="?"); crv.set_defaults(func=cmd_customer_review)
+    bm = sub.add_parser("build-model", help="Run v3.4 Canonical BA Model Builder")
+    bm.add_argument("slug", nargs="?"); bm.set_defaults(func=cmd_build_model)
+    msrs = sub.add_parser("model-srs", help="Run v3.5 SRS from BA Model"); msrs.add_argument("slug", nargs="?"); msrs.add_argument("--lang", default="vi"); msrs.set_defaults(func=cmd_model_srs)
+    mus = sub.add_parser("model-stories", help="Run v3.6 User Stories from BA Model"); mus.add_argument("slug", nargs="?"); mus.add_argument("--lang", default="vi"); mus.set_defaults(func=cmd_model_stories)
+    muat = sub.add_parser("model-uat", help="Run v3.7 UAT Pack from BA Model"); muat.add_argument("slug", nargs="?"); muat.add_argument("--lang", default="vi"); muat.set_defaults(func=cmd_model_uat)
+    mq = sub.add_parser("model-quote", help="Run v3.8 Quotation from BA Model"); mq.add_argument("slug", nargs="?"); mq.add_argument("--lang", default="vi"); mq.set_defaults(func=cmd_model_quote)
+    mex = sub.add_parser("export-customer-model", help="Export customer pack from BA Model"); mex.add_argument("slug", nargs="?"); mex.add_argument("--lang", default="vi"); mex.set_defaults(func=cmd_export_customer_model)
+    q3 = sub.add_parser("quality-v3", help="Run v3.9 anti-generic quality gate"); q3.add_argument("slug", nargs="?"); q3.set_defaults(func=cmd_quality_v3)
     dec = sub.add_parser("decompose", help="Run v3.0 Functional Decomposition Engine")
     dec.add_argument("slug", nargs="?"); dec.set_defaults(func=cmd_decompose)
     gd = sub.add_parser("generate-decomp", help="Run v3.1 decomposition-driven generation")

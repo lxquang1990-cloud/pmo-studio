@@ -1,0 +1,1 @@
+"""Canonical BA model package."""
