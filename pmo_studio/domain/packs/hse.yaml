@@ -34,3 +34,33 @@ acceptance_presets:
   - Incident cannot close with open critical actions
   - Inspection checklist records evidence
   - Compliance report filters by site and period
+
+capabilities_v2:
+  - name: Quản lý sự cố an toàn
+    description: Ghi nhận, phân loại và xử lý incident/near-miss trong vận hành HSE.
+    features:
+      - name: Báo cáo incident/near-miss
+        description: Ghi nhận sự cố, vị trí, mức độ, người liên quan, hình ảnh và biện pháp xử lý ban đầu.
+        complexity: Complex
+        manday: 6
+        inputs: [loại sự cố, vị trí, mức độ, mô tả, hình ảnh]
+        outputs: [incident record, mã sự cố, trạng thái xử lý]
+        validations: [mức độ nghiêm trọng bắt buộc, hình ảnh bắt buộc với high severity]
+        permissions: [Employee tạo báo cáo, HSE Officer phân loại]
+        audit_events: [tạo incident, cập nhật phân loại]
+        business_rules: [incident high severity phải được escalated]
+      - name: CAPA và theo dõi khắc phục
+        description: Tạo corrective/preventive actions, gán người phụ trách và theo dõi deadline.
+        complexity: Complex
+        manday: 7
+        inputs: [incident, action, owner, due date]
+        outputs: [CAPA action, trạng thái, bằng chứng hoàn thành]
+        validations: [CAPA quá hạn phải cảnh báo]
+        permissions: [HSE Manager phê duyệt CAPA, Owner cập nhật kết quả]
+        audit_events: [tạo CAPA, đóng CAPA]
+        business_rules: [CAPA chỉ đóng khi có bằng chứng]
+data_entities: [Incident, CAPAAction, InspectionChecklist, Evidence, AuditLog]
+assumptions: [Ma trận severity và escalation được xác nhận trong workshop]
+out_of_scope: [IoT realtime monitoring nếu chưa có thiết bị/API]
+allowed_terms: [incident, near-miss, CAPA, audit log, dashboard, API, workflow]
+blocked_terms: [Opportunity pipeline, asset allocation]

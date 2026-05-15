@@ -6,7 +6,7 @@ from pathlib import Path
 from pmo_studio.model.builder import load_ba_model
 
 PLACEHOLDER=re.compile(r'(\$\{[^}]+\}|\{\{[^}]+\}\}|\bTBD\b|\bTODO\b|\bFIXME\b|lorem ipsum|chưa xác định|cần bổ sung)',re.I)
-GENERIC=[r'System shall support .* where applicable',r'source-defined modules',r'Execute business workflow',r'Validate scenario \d+',r'Data is validated, saved/processed',r'Feature score 100/100',r'Trace: FEAT-']
+GENERIC=[r'System shall support .* where applicable',r'source-defined modules',r'Execute business workflow',r'Validate scenario \d+',r'Data is validated, saved/processed',r'Feature score 100/100',r'Trace: FEAT-',r'Người dùng thực hiện .*, hệ thống kiểm tra',r'The user performs .*, the system checks']
 @dataclass
 class Finding: id:str; severity:str; message:str; artifact:str=''; evidence:str=''
 @dataclass
@@ -31,6 +31,7 @@ def run_quality_v3(project_root:Path, scope:str='all')->QualityV3Report:
         reqs={r.id for r in m.requirements}; ac_req={a.requirement_id for a in m.acceptance_criteria}; tc_ac={t.acceptance_criteria_id for t in m.test_cases}; acs={a.id for a in m.acceptance_criteria}
         if reqs-ac_req: findings.append(Finding('Q3-COVERAGE-AC','high','Some requirements have no AC',evidence=', '.join(sorted(reqs-ac_req)[:10])))
         if acs-tc_ac: findings.append(Finding('Q3-COVERAGE-TC','high','Some AC have no test case',evidence=', '.join(sorted(acs-tc_ac)[:10])))
+        findings.extend(_semantic_model_checks(m))
     score=max(0,100-sum({'high':25,'medium':10,'low':5}.get(f.severity,5) for f in findings)); readiness='READY' if score>=90 and not any(f.severity=='high' for f in findings) else 'NEEDS_REVIEW' if score>=70 else 'NOT_READY'
     return QualityV3Report('pmo.quality_v3.v1',datetime.now(timezone.utc).isoformat(),project_root.name,score,readiness,findings)
 
@@ -40,3 +41,24 @@ def write_quality_v3(project_root:Path, scope:str='all')->Path:
     md += ['No issues found.'] if not r.findings else ['| ID | Severity | Artifact | Message | Evidence |','|---|---|---|---|---|',*[f'| {f.id} | {f.severity} | {f.artifact} | {f.message} | {f.evidence} |' for f in r.findings]]
     (project_root/(f'quality/customer-review-v3.{scope}.md' if scope != 'all' else 'quality/customer-review-v3.md')).write_text('\n'.join(md)+'\n',encoding='utf-8')
     return out
+
+
+def _semantic_model_checks(m):
+    findings=[]
+    weak_verbs=('manage','handle','support','process','thực hiện','xử lý','hỗ trợ')
+    for r in m.requirements:
+        if len((r.description or '').split()) < 10:
+            findings.append(Finding('Q3-WEAK-REQ','medium','Requirement description is too short/weak',evidence=r.id))
+        if not r.actor_roles or not r.inputs or not r.outputs:
+            findings.append(Finding('Q3-INCOMPLETE-REQ','high','Requirement misses role/input/output coverage',evidence=r.id))
+        if not (r.validation_rules or r.permission_rules or r.audit_events):
+            findings.append(Finding('Q3-WEAK-CONTROL','medium','Requirement lacks validation/permission/audit controls',evidence=r.id))
+    seen=set()
+    for ac in m.acceptance_criteria:
+        key=(ac.given.strip().lower(), ac.when.strip().lower(), ac.then.strip().lower())
+        if key in seen:
+            findings.append(Finding('Q3-DUP-AC','medium','Duplicate acceptance criteria definition',evidence=ac.id))
+        seen.add(key)
+        if len((ac.given+' '+ac.when+' '+ac.then).split()) < 12:
+            findings.append(Finding('Q3-WEAK-AC','medium','Acceptance criteria is too thin',evidence=ac.id))
+    return findings

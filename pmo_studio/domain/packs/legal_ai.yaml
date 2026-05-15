@@ -35,3 +35,33 @@ acceptance_presets:
   - AI answer must include citation or escalate
   - Final legal answer is versioned
   - Unauthorized user cannot access restricted legal matter
+
+capabilities_v2:
+  - name: Quản lý tài liệu pháp lý
+    description: Tải lên, phân loại và tìm kiếm hợp đồng/tài liệu pháp lý.
+    features:
+      - name: Upload và phân loại tài liệu
+        description: Upload tài liệu, gán loại hồ sơ, bên liên quan và metadata pháp lý.
+        complexity: Medium
+        manday: 5
+        inputs: [file tài liệu, loại hồ sơ, bên liên quan, ngày hiệu lực]
+        outputs: [legal document profile, metadata]
+        validations: [file đúng định dạng, metadata bắt buộc đầy đủ]
+        permissions: [Legal User upload, Legal Manager duyệt metadata]
+        audit_events: [upload tài liệu, cập nhật metadata]
+        business_rules: [tài liệu confidential chỉ hiển thị theo quyền]
+      - name: Trích xuất điều khoản và rủi ro
+        description: Trích xuất clause chính, nghĩa vụ, deadline và risk flags để hỗ trợ review.
+        complexity: Complex
+        manday: 8
+        inputs: [legal document, extraction template]
+        outputs: [clause list, risk summary, obligation tracker]
+        validations: [kết quả AI phải có trạng thái review của người dùng]
+        permissions: [Legal Reviewer xác nhận extraction]
+        audit_events: [chạy extraction, xác nhận kết quả]
+        business_rules: [AI output là hỗ trợ, không thay thế legal approval]
+data_entities: [LegalDocument, Clause, Obligation, RiskFlag, ReviewNote, AuditLog]
+assumptions: [Nguồn dữ liệu pháp lý và template extraction được customer xác nhận]
+out_of_scope: [Tư vấn pháp lý tự động không có người duyệt]
+allowed_terms: [AI, clause, obligation, risk, citation, workflow, audit log]
+blocked_terms: [RFID, inventory campaign]

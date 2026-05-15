@@ -35,3 +35,33 @@ acceptance_presets:
   - Learner progress is saved per lesson
   - Certificate requires passing score
   - Manager can view team compliance only
+
+capabilities_v2:
+  - name: Quản lý khóa học
+    description: Quản lý course catalog, enrollment, learning progress và assessment.
+    features:
+      - name: Course catalog
+        description: Tạo khóa học, module, bài học, tài liệu và điều kiện ghi danh.
+        complexity: Medium
+        manday: 5
+        inputs: [course, module, lesson, tài liệu]
+        outputs: [course catalog, enrollment rule]
+        validations: [course phải có ít nhất một module trước khi publish]
+        permissions: [Instructor tạo course, Admin publish]
+        audit_events: [tạo course, publish course]
+        business_rules: [course đã publish phải quản lý version khi sửa]
+      - name: Enrollment và progress tracking
+        description: Ghi danh học viên, theo dõi tiến độ học, quiz và completion certificate.
+        complexity: Complex
+        manday: 7
+        inputs: [learner, course, quiz result]
+        outputs: [enrollment, progress, certificate]
+        validations: [completion chỉ đạt khi đủ điều kiện học/quiz]
+        permissions: [Learner học course, Instructor xem progress]
+        audit_events: [enroll, complete lesson, issue certificate]
+        business_rules: [certificate chỉ phát hành khi learner hoàn thành điều kiện]
+data_entities: [Course, Module, Lesson, Enrollment, Quiz, Certificate, AuditLog]
+assumptions: [Cấu trúc course và tiêu chí completion được xác nhận]
+out_of_scope: [SCORM/xAPI advanced nếu chưa có yêu cầu]
+allowed_terms: [course, enrollment, quiz, certificate, LMS, API]
+blocked_terms: [purchase request, incident]

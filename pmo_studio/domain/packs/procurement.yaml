@@ -34,3 +34,33 @@ acceptance_presets:
   - PR approval follows amount threshold
   - PO cannot exceed approved budget without exception
   - Goods receipt validates ordered quantity
+
+capabilities_v2:
+  - name: Quản lý yêu cầu mua sắm
+    description: Tạo, duyệt và theo dõi purchase request theo ngân sách/phòng ban.
+    features:
+      - name: Purchase request
+        description: Tạo yêu cầu mua sắm với danh mục hàng hóa, số lượng, ngân sách và lý do.
+        complexity: Medium
+        manday: 5
+        inputs: [hàng hóa, số lượng, ngân sách, lý do]
+        outputs: [purchase request, trạng thái phê duyệt]
+        validations: [ngân sách không vượt hạn mức cấu hình]
+        permissions: [Requester tạo PR, Manager phê duyệt]
+        audit_events: [tạo PR, phê duyệt PR]
+        business_rules: [PR vượt hạn mức phải qua cấp phê duyệt cao hơn]
+      - name: RFQ và so sánh báo giá
+        description: Gửi RFQ cho vendor, thu nhận báo giá và so sánh theo giá/điều kiện giao hàng.
+        complexity: Complex
+        manday: 7
+        inputs: [vendor, RFQ, quotation]
+        outputs: [comparison sheet, selected vendor]
+        validations: [vendor phải active, quotation còn hiệu lực]
+        permissions: [Procurement Officer quản lý RFQ, Manager chọn vendor]
+        audit_events: [gửi RFQ, chọn vendor]
+        business_rules: [chọn vendor phải có lý do]
+data_entities: [PurchaseRequest, RFQ, Vendor, Quotation, PurchaseOrder, AuditLog]
+assumptions: [Quy trình phê duyệt và hạn mức ngân sách được xác nhận]
+out_of_scope: [ERP accounting realtime nếu chưa có API contract]
+allowed_terms: [PR, RFQ, PO, vendor, workflow, dashboard, API]
+blocked_terms: [near-miss, văn bản đến]

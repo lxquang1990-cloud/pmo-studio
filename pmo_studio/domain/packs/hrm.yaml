@@ -35,3 +35,33 @@ acceptance_presets:
   - Employee can submit leave only within balance
   - Manager approvals are audited
   - Sensitive HR data requires role-based access
+
+capabilities_v2:
+  - name: Quản lý hồ sơ nhân sự
+    description: Quản lý employee profile, hợp đồng, phòng ban và vòng đời nhân sự.
+    features:
+      - name: Employee profile
+        description: Tạo/cập nhật hồ sơ nhân sự, thông tin cá nhân, phòng ban, chức danh và trạng thái làm việc.
+        complexity: Medium
+        manday: 5
+        inputs: [thông tin nhân sự, phòng ban, chức danh, trạng thái]
+        outputs: [employee profile, lịch sử thay đổi]
+        validations: [mã nhân viên không trùng, thông tin bắt buộc đầy đủ]
+        permissions: [HR Officer cập nhật, Employee xem hồ sơ của mình]
+        audit_events: [tạo nhân sự, cập nhật hồ sơ]
+        business_rules: [nhân sự nghỉ việc không được gán vào quy trình mới]
+      - name: Leave request workflow
+        description: Nhân viên tạo đơn nghỉ phép, quản lý phê duyệt và HR theo dõi quota.
+        complexity: Complex
+        manday: 6
+        inputs: [loại phép, ngày nghỉ, lý do]
+        outputs: [leave request, trạng thái phê duyệt, quota cập nhật]
+        validations: [số ngày nghỉ không vượt quota]
+        permissions: [Employee tạo đơn, Manager phê duyệt, HR theo dõi]
+        audit_events: [tạo leave request, phê duyệt/từ chối]
+        business_rules: [nghỉ phép vượt quota cần approval đặc biệt]
+data_entities: [Employee, Department, Contract, LeaveRequest, Timesheet, AuditLog]
+assumptions: [Chính sách nghỉ phép và cơ cấu tổ chức được xác nhận]
+out_of_scope: [Payroll tính lương phức tạp nếu chưa estimate riêng]
+allowed_terms: [employee, leave, timesheet, payroll, workflow, API]
+blocked_terms: [RFQ, incident]

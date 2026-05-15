@@ -7,6 +7,7 @@ from docx.shared import Pt
 from pmo_studio.model.builder import load_ba_model
 from pmo_studio.model.schema import BAModel
 from pmo_studio.model.translation import model_to_language
+from pmo_studio.model.content_polish import polish_model
 from pmo_studio.generators.quotation import QuotationInput, HangMuc, SubSystem, Feature as QFeature, ScreenRow, OutOfScreenItem, Assumption, generate_quotation_xlsx, MANDAY_RATE_VND
 
 def ensure_model(project):
@@ -17,7 +18,7 @@ def ensure_model(project):
     return load_ba_model(project.root)
 
 def generate_srs_from_model(project, lang='vi')->Path:
-    m=model_to_language(ensure_model(project), lang); out=project.root/f'artifacts/ba/03-srs/srs-customer-ready.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=polish_model(model_to_language(ensure_model(project), lang), lang); out=project.root/f'artifacts/ba/03-srs/srs-customer-ready.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
     title = 'SRS Customer-ready' if lang == 'en' else 'SRS Customer-ready'
     intro = 'Introduction' if lang == 'en' else 'Giới thiệu'
     scope = 'Scope' if lang == 'en' else 'Phạm vi'
@@ -35,7 +36,7 @@ def generate_srs_from_model(project, lang='vi')->Path:
     out.write_text('\n'.join(lines)+'\n',encoding='utf-8'); _docx(out, project.root/f'exports/customer/{lang}/srs-customer-ready.docx'); return out
 
 def generate_stories_from_model(project, lang='vi')->Path:
-    m=model_to_language(ensure_model(project), lang); out=project.root/f'artifacts/ba/04-us/user-stories.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=polish_model(model_to_language(ensure_model(project), lang), lang); out=project.root/f'artifacts/ba/04-us/user-stories.{lang}.md'; out.parent.mkdir(parents=True,exist_ok=True)
     lines=[f'# User Stories & Acceptance Criteria — {m.project.product or m.project.slug}','']
     for us in m.user_stories:
         feat=next(f for f in m.features if f.id==us.feature_id)
@@ -45,7 +46,7 @@ def generate_stories_from_model(project, lang='vi')->Path:
     out.write_text('\n'.join(lines),encoding='utf-8'); _docx(out, project.root/f'exports/customer/{lang}/user-stories.docx'); return out
 
 def generate_uat_from_model(project, lang='vi')->Path:
-    m=model_to_language(ensure_model(project), lang); out=project.root/f'exports/customer/{lang}/uat-pack/test-cases-uat.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=polish_model(model_to_language(ensure_model(project), lang), lang); out=project.root/f'exports/customer/{lang}/uat-pack/test-cases-uat.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
     wb=Workbook(); ws=wb.active; ws.title='Test Cases'; headers=['TC ID','Module/Capability','Linked REQ','Linked US','Linked AC','Role','Priority','Precondition','Test Data','Steps','Expected Result','Actual Result','Status','Evidence','Owner']; _header(ws,headers)
     for tc in m.test_cases:
         req=next(r for r in m.requirements if r.id==tc.requirement_id); feat=next(f for f in m.features if f.id==req.feature_id); cap=next(c for c in m.capabilities if c.id==feat.capability_id)
@@ -58,7 +59,7 @@ def generate_uat_from_model(project, lang='vi')->Path:
     wb.save(out); return out
 
 def generate_quote_from_model(project, lang='vi')->Path:
-    m=model_to_language(ensure_model(project), lang); out=project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
+    m=polish_model(model_to_language(ensure_model(project), lang), lang); out=project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx'; out.parent.mkdir(parents=True,exist_ok=True)
     subs=[]
     for cap in m.capabilities:
         qfs=[]
