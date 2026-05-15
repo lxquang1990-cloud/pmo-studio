@@ -46,7 +46,7 @@ def export_delivery_pack(project, lang: str = 'vi', *, make_zip: bool = True) ->
         'srs_docx': project.root/f'exports/customer/{lang}/srs-customer-ready.docx',
         'user_stories_docx': project.root/f'exports/customer/{lang}/user-stories.docx',
         'uat_xlsx': project.root/f'exports/customer/{lang}/uat-pack/test-cases-uat.{lang}.xlsx',
-        'quotation_xlsx': project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx',
+        'quotation_xlsx': _select_customer_quotation(project, lang),
         'quality_json': quality_json,
         'quality_md': project.root/f'quality/customer-review-v3.customer.md',
         'ba_model_json': model_path,
@@ -71,6 +71,35 @@ def export_delivery_pack(project, lang: str = 'vi', *, make_zip: bool = True) ->
         _write_manifest_md(delivery_root/'DELIVERY_MANIFEST.md', manifest)
     return manifest_path
 
+
+
+def _select_customer_quotation(project, lang: str) -> Path:
+    """Pick the most customer-ready quotation workbook available.
+
+    The model quote is intentionally compact. If a detailed customer quotation
+    has been produced by a richer estimator/reviewer, delivery packs should use
+    that detailed workbook instead of overwriting it with the compact model one.
+    """
+    candidates = [
+        project.root/f'exports/customer/{lang}/quotation-customer-ready-detailed.{lang}.xlsx',
+        project.root/f'exports/customer/{lang}/quotation-customer-ready-detailed.xlsx',
+        project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx',
+        project.root/f'exports/customer/{lang}/quotation-customer-ready.xlsx',
+    ]
+    existing = [p for p in candidates if p.exists()]
+    if not existing:
+        return project.root/f'exports/customer/{lang}/quotation-customer-ready.{lang}.xlsx'
+    return max(existing, key=_quotation_detail_score)
+
+def _quotation_detail_score(path: Path) -> tuple[int, int]:
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(path, read_only=True, data_only=True)
+        sheet_bonus = 50 if {'Feature List', 'Tổng hợp', 'Giả định'} <= set(wb.sheetnames) else 0
+        rows = wb['Feature List'].max_row if 'Feature List' in wb.sheetnames else max(ws.max_row for ws in wb.worksheets)
+        return (sheet_bonus + rows, path.stat().st_size)
+    except Exception:
+        return (0, path.stat().st_size)
 
 def _delivery_name(kind: str, src: Path, lang: str) -> str:
     names={
