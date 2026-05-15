@@ -1,7 +1,7 @@
 [project]
 name = "pmo-studio"
-version = "3.1.0"
-description = "PMO Studio v3.1 Documentation Operating System"
+version = "3.2.0"
+description = "PMO Studio v3.2 Documentation Operating System"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "LicenseRef-Proprietary"

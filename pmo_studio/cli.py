@@ -47,6 +47,7 @@ from pmo_studio.exporters.uat_pack import export_test_case_excel, export_uat_pac
 from pmo_studio.quality.consistency_engine import write_consistency_report
 from pmo_studio.decomposition.engine import write_decomposition
 from pmo_studio.decomposition.generation import generate_from_decomposition
+from pmo_studio.decomposition.review import write_decomposition_review
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -449,6 +450,12 @@ def cmd_web(args):
     from pmo_studio.webapp import run_web
     run_web(Path(args.root), host=args.host, port=args.port)
 
+def cmd_decomposition_review(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_decomposition_review(p.root)
+    print(f"Decomposition review: {out}")
+
 def cmd_generate_from_decomposition(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -715,6 +722,8 @@ def build_parser():
     dec.add_argument("slug", nargs="?"); dec.set_defaults(func=cmd_decompose)
     gd = sub.add_parser("generate-decomp", help="Run v3.1 decomposition-driven generation")
     gd.add_argument("slug", nargs="?"); gd.set_defaults(func=cmd_generate_from_decomposition)
+    dr = sub.add_parser("decomp-review", help="Run v3.2 decomposition review mode")
+    dr.add_argument("slug", nargs="?"); dr.set_defaults(func=cmd_decomposition_review)
     oq = sub.add_parser("output-quality", help="Run v2.6 output quality upgrade")
     oq.add_argument("slug", nargs="?"); oq.add_argument("--check", action="store_true"); oq.set_defaults(func=cmd_output_quality)
     sr = sub.add_parser("source-refiner", help="Run v2.7 source-grounded refiner")
