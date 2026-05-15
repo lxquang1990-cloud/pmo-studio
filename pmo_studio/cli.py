@@ -45,6 +45,7 @@ from pmo_studio.quality.output_quality import write_output_quality
 from pmo_studio.quality.source_refiner import write_source_refinement
 from pmo_studio.exporters.uat_pack import export_test_case_excel, export_uat_pack
 from pmo_studio.quality.consistency_engine import write_consistency_report
+from pmo_studio.decomposition.engine import write_decomposition
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -447,6 +448,12 @@ def cmd_web(args):
     from pmo_studio.webapp import run_web
     run_web(Path(args.root), host=args.host, port=args.port)
 
+def cmd_decompose(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    out = write_decomposition(p.root)
+    print(f"Functional decomposition: {out}")
+
 def cmd_output_quality(args):
     args.slug = _resolve_slug(args)
     p = Project.load(args.slug, root_base=Path(args.root))
@@ -696,6 +703,8 @@ def build_parser():
     qi.add_argument("slug", nargs="?"); qi.set_defaults(func=cmd_quality)
     crv = sub.add_parser("customer-review", help="Run customer-ready review mode")
     crv.add_argument("slug", nargs="?"); crv.set_defaults(func=cmd_customer_review)
+    dec = sub.add_parser("decompose", help="Run v3.0 Functional Decomposition Engine")
+    dec.add_argument("slug", nargs="?"); dec.set_defaults(func=cmd_decompose)
     oq = sub.add_parser("output-quality", help="Run v2.6 output quality upgrade")
     oq.add_argument("slug", nargs="?"); oq.add_argument("--check", action="store_true"); oq.set_defaults(func=cmd_output_quality)
     sr = sub.add_parser("source-refiner", help="Run v2.7 source-grounded refiner")
