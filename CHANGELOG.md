@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.1.1 - Unreleased
+
+### Changed
+- Stabilized product/version documentation around PMO Studio v5.1.
+- Added golden path, known limitations, and product hardening documentation.
+- Added non-UX hardening checks for version consistency and export/source privacy.
+- Added real-world benchmark foundation for customer-style PMO output evaluation.
+
 ## 1.0.0 - 2026-05-14
 
 ### Added

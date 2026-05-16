@@ -3,7 +3,7 @@
 Current release candidate:
 
 ```text
-1.0.0rc2
+5.1.0
 ```
 
 ## Verify
@@ -24,8 +24,11 @@ INSTALL_CHECK_PASS
 ## Manual checks
 
 - [ ] README quick start is accurate.
+- [ ] Version strings match across `pyproject.toml`, `pmo_studio.__version__`, CLI help, README, and this release page.
 - [ ] `pmo --help` works after editable install.
 - [ ] `python -m pmo_studio.cli eval --benchmark --no-docx` passes.
+- [ ] Golden path docs are current.
+- [ ] Known limitations are current.
 - [ ] ZIP bundle excludes `source/uploads`.
 - [ ] ZIP bundle includes `source/redacted` only when explicitly requested.
 - [ ] `/pmo baseline ...` requires approval in adapter.
@@ -47,7 +50,7 @@ Templates:
 ## Tag suggestion
 
 ```bash
-git tag v1.0.0rc2
+git tag v5.1.0
 ```
 
 Only tag after review and commit.

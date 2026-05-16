@@ -615,13 +615,13 @@ def cmd_eval(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="pmo", description="PMO Studio v2.1")
+    parser = argparse.ArgumentParser(prog="pmo", description="PMO Studio v5.1")
     parser.add_argument("--root", default=str(DEFAULT_ROOT))
     sub = parser.add_subparsers(required=True)
     init = sub.add_parser("init")
     init.add_argument("slug")
     init.add_argument("--customer", default="TBD")
-    init.add_argument("--brief", default="Tạo hệ thống PMO Studio v2.1 cho tài liệu dự án phần mềm.")
+    init.add_argument("--brief", default="Tạo hệ thống PMO Studio v5.1 cho tài liệu dự án phần mềm.")
     init.add_argument("--product", action="append", default=["eOffice"])
     init.add_argument("--domain-pack", default="bteco", choices=["bteco", "eoffice", "ky_so", "hse", "pms"], help="Domain intelligence pack for domain-specific content")
     init.add_argument("--source", action="append", default=[])

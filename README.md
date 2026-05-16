@@ -1,4 +1,4 @@
-# PMO Studio v2.1
+# PMO Studio v5.1
 
 [![PMO Studio Verify](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/verify.yml/badge.svg)](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/verify.yml)
 [![Release Check](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/release.yml/badge.svg)](https://github.com/lxquang1990-cloud/pmo-studio/actions/workflows/release.yml)
@@ -8,7 +8,7 @@ PMO Studio is an offline-first Documentation Operating System for software proje
 ## Current milestone
 
 ```text
-PMO Studio v1.0.0 — Stage21 green: 26/26 gates, Traceability PASS, customer export ready
+PMO Studio v5.1.0 — detailed customer quotation generator, model-first BA pipeline, quality intelligence, delivery packs, traceability PASS, customer export ready
 ```
 
 ## Core principles
@@ -56,6 +56,8 @@ Latest export: /tmp/pmo-demo/asset-management-demo/exports/customer/asset-manage
 ```
 
 The demo uses the bundled source brief at [`examples/asset-management-source.md`](examples/asset-management-source.md) and runs fully offline with `--llm noop`.
+
+For normal customer work, prefer the [Golden Path](docs/golden-path.md). Review [Known Limitations](docs/known-limitations.md) before sending externally.
 
 ### Manual flow
 

@@ -1,0 +1,16 @@
+{
+  "case_id": "legal-ai-customer-style",
+  "domain_pack": "legal_ai",
+  "expected_modules": [
+    "Hỏi đáp pháp lý nội bộ",
+    "Quản lý ủy quyền",
+    "Soạn thảo và rà soát hợp đồng"
+  ],
+  "out_of_scope": [
+    "Tư vấn pháp lý tự động không có người duyệt",
+    "Ký số vendor mới ngoài SmartCA/eOffice trong phase 1"
+  ],
+  "expected_manday_min": 40,
+  "expected_manday_max": 240,
+  "human_review_required": true
+}
