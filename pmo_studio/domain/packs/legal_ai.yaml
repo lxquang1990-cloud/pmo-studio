@@ -37,31 +37,143 @@ acceptance_presets:
   - Unauthorized user cannot access restricted legal matter
 
 capabilities_v2:
-  - name: Quản lý tài liệu pháp lý
-    description: Tải lên, phân loại và tìm kiếm hợp đồng/tài liệu pháp lý.
+  - name: Hỏi & Đáp pháp lý tích hợp AI
+    description: Cung cấp kênh hỏi đáp pháp lý nội bộ có AI hỗ trợ, trích dẫn nguồn và kiểm soát review của pháp chế.
     features:
-      - name: Upload và phân loại tài liệu
-        description: Upload tài liệu, gán loại hồ sơ, bên liên quan và metadata pháp lý.
+      - name: Gửi câu hỏi pháp lý
+        description: Người dùng nội bộ gửi câu hỏi pháp lý, đính kèm tài liệu và phân loại chủ đề/cấp độ ưu tiên.
         complexity: Medium
         manday: 5
-        inputs: [file tài liệu, loại hồ sơ, bên liên quan, ngày hiệu lực]
-        outputs: [legal document profile, metadata]
-        validations: [file đúng định dạng, metadata bắt buộc đầy đủ]
-        permissions: [Legal User upload, Legal Manager duyệt metadata]
-        audit_events: [upload tài liệu, cập nhật metadata]
-        business_rules: [tài liệu confidential chỉ hiển thị theo quyền]
-      - name: Trích xuất điều khoản và rủi ro
-        description: Trích xuất clause chính, nghĩa vụ, deadline và risk flags để hỗ trợ review.
+        inputs: [câu hỏi pháp lý, chủ đề, mức độ ưu tiên, tài liệu đính kèm]
+        outputs: [legal question ticket, trạng thái xử lý]
+        validations: [nội dung câu hỏi bắt buộc, file đính kèm đúng định dạng]
+        permissions: [Business User tạo câu hỏi, Legal Officer xem và xử lý]
+        audit_events: [tạo câu hỏi, cập nhật trạng thái]
+        business_rules: [câu hỏi thuộc phạm vi confidential chỉ hiển thị theo quyền]
+      - name: AI trả lời có trích dẫn nguồn
+        description: AI gợi ý câu trả lời dựa trên kho tri thức/tài liệu pháp lý, kèm nguồn trích dẫn và mức độ tin cậy.
         complexity: Complex
         manday: 8
-        inputs: [legal document, extraction template]
-        outputs: [clause list, risk summary, obligation tracker]
-        validations: [kết quả AI phải có trạng thái review của người dùng]
-        permissions: [Legal Reviewer xác nhận extraction]
-        audit_events: [chạy extraction, xác nhận kết quả]
-        business_rules: [AI output là hỗ trợ, không thay thế legal approval]
-data_entities: [LegalDocument, Clause, Obligation, RiskFlag, ReviewNote, AuditLog]
-assumptions: [Nguồn dữ liệu pháp lý và template extraction được customer xác nhận]
-out_of_scope: [Tư vấn pháp lý tự động không có người duyệt]
-allowed_terms: [AI, clause, obligation, risk, citation, workflow, audit log]
-blocked_terms: [RFID, inventory campaign]
+        inputs: [legal question, knowledge base, prompt template]
+        outputs: [AI draft answer, citation list, confidence/risk flags]
+        validations: [AI answer phải có citation hoặc chuyển pháp chế xử lý thủ công]
+        permissions: [Legal Officer review AI answer trước khi phát hành]
+        audit_events: [generate AI answer, review answer, publish answer]
+        business_rules: [AI output là bản nháp hỗ trợ, câu trả lời cuối cùng phải qua người có thẩm quyền]
+      - name: Kho tri thức FAQ pháp lý
+        description: Quản lý FAQ/câu trả lời pháp lý đã duyệt để tái sử dụng và tìm kiếm.
+        complexity: Medium
+        manday: 5
+        inputs: [FAQ, chủ đề, hiệu lực, nguồn căn cứ]
+        outputs: [approved FAQ, version history]
+        validations: [FAQ published phải có nguồn căn cứ và người duyệt]
+        permissions: [Legal Officer tạo/sửa, Approver duyệt phát hành]
+        audit_events: [tạo FAQ, duyệt FAQ, cập nhật version]
+        business_rules: [FAQ hết hiệu lực không được dùng làm câu trả lời cuối]
+  - name: Quản lý Ủy quyền
+    description: Quản lý đề nghị, phê duyệt, phát hành và theo dõi hiệu lực ủy quyền.
+    features:
+      - name: Tạo đề nghị ủy quyền
+        description: Tạo hồ sơ đề nghị ủy quyền, thông tin người ủy quyền/người được ủy quyền, phạm vi, thời hạn và tài liệu liên quan.
+        complexity: Medium
+        manday: 5
+        inputs: [người ủy quyền, người được ủy quyền, phạm vi ủy quyền, thời hạn, tài liệu]
+        outputs: [authorization request, trạng thái phê duyệt]
+        validations: [thời hạn ủy quyền hợp lệ, phạm vi ủy quyền bắt buộc]
+        permissions: [Business User tạo đề nghị, Legal Officer kiểm tra]
+        audit_events: [tạo đề nghị ủy quyền, cập nhật hồ sơ]
+        business_rules: [ủy quyền hết hạn không được sử dụng trong quy trình phê duyệt]
+      - name: Phê duyệt và ký số ủy quyền
+        description: Trình duyệt, ký số SmartCA/eOffice và phát hành văn bản ủy quyền.
+        complexity: Complex
+        manday: 7
+        inputs: [authorization request, approval flow, digital signature]
+        outputs: [approved authorization, signed document]
+        validations: [chỉ người có thẩm quyền mới được phê duyệt/ký]
+        permissions: [Approver phê duyệt, Admin cấu hình luồng]
+        audit_events: [trình duyệt ủy quyền, ký số, phát hành]
+        business_rules: [văn bản đã ký là immutable trừ quy trình thu hồi/điều chỉnh]
+  - name: Soạn thảo, rà soát pháp lý và phê duyệt hợp đồng
+    description: Hỗ trợ soạn thảo, review pháp lý, kiểm tra rủi ro và phê duyệt hợp đồng.
+    features:
+      - name: Soạn thảo hợp đồng theo mẫu
+        description: Tạo dự thảo hợp đồng từ template, metadata, bên liên quan và điều khoản chuẩn.
+        complexity: Complex
+        manday: 7
+        inputs: [template hợp đồng, thông tin bên liên quan, metadata, điều khoản]
+        outputs: [contract draft, version history]
+        validations: [template phải còn hiệu lực, metadata bắt buộc đầy đủ]
+        permissions: [Business User tạo draft, Legal Officer chỉnh sửa pháp lý]
+        audit_events: [tạo draft, cập nhật version]
+        business_rules: [mọi thay đổi hợp đồng phải lưu version]
+      - name: Rà soát pháp lý hợp đồng bằng AI
+        description: AI hỗ trợ phát hiện điều khoản rủi ro, thiếu điều khoản bắt buộc, nghĩa vụ và deadline trong hợp đồng.
+        complexity: Complex
+        manday: 8
+        inputs: [contract draft, review checklist, AI model]
+        outputs: [risk summary, clause comments, obligation list]
+        validations: [kết quả AI phải được Legal Officer xác nhận]
+        permissions: [Legal Officer review, Approver xem kết quả]
+        audit_events: [chạy AI review, xác nhận kết quả review]
+        business_rules: [AI review không thay thế phê duyệt pháp lý cuối cùng]
+      - name: Luồng phê duyệt hợp đồng
+        description: Thiết lập và thực hiện luồng phê duyệt hợp đồng nhiều cấp, tích hợp eOffice/ký điện tử nếu có.
+        complexity: Complex
+        manday: 7
+        inputs: [contract draft, approval matrix, reviewers]
+        outputs: [approval task, decision log, approved contract]
+        validations: [không phát hành hợp đồng khi còn step chưa duyệt]
+        permissions: [Approver phê duyệt theo ma trận, Admin cấu hình luồng]
+        audit_events: [trình duyệt hợp đồng, phê duyệt/từ chối]
+        business_rules: [luồng phê duyệt phụ thuộc giá trị, loại hợp đồng và đơn vị phụ trách]
+  - name: Thẩm định pháp lý
+    description: Quản lý hồ sơ thẩm định, checklist, ý kiến pháp chế và kết luận thẩm định.
+    features:
+      - name: Tạo hồ sơ thẩm định
+        description: Tạo hồ sơ thẩm định pháp lý cho tài liệu/vụ việc/hợp đồng, phân công người xử lý và deadline.
+        complexity: Medium
+        manday: 5
+        inputs: [hồ sơ thẩm định, tài liệu, người xử lý, deadline]
+        outputs: [appraisal case, task xử lý]
+        validations: [deadline và người xử lý bắt buộc]
+        permissions: [Legal Officer tạo hồ sơ, Approver theo dõi]
+        audit_events: [tạo hồ sơ thẩm định, phân công xử lý]
+        business_rules: [hồ sơ quá hạn phải hiển thị cảnh báo]
+      - name: Checklist và kết luận thẩm định
+        description: Ghi nhận checklist, ý kiến review, rủi ro và kết luận thẩm định cuối cùng.
+        complexity: Complex
+        manday: 6
+        inputs: [checklist, ý kiến, risk flags, kết luận]
+        outputs: [appraisal report, risk log]
+        validations: [kết luận cuối phải có người duyệt]
+        permissions: [Legal Officer nhập ý kiến, Approver phê duyệt kết luận]
+        audit_events: [cập nhật checklist, phát hành kết luận]
+        business_rules: [kết luận đã phát hành phải lưu version]
+  - name: Báo cáo, thống kê và quản trị
+    description: Báo cáo vận hành pháp chế, dashboard, phân quyền, cấu hình tích hợp và audit log.
+    features:
+      - name: Dashboard và báo cáo pháp lý
+        description: Thống kê số lượng câu hỏi, hợp đồng, ủy quyền, thẩm định, SLA xử lý và trạng thái tồn đọng.
+        complexity: Medium
+        manday: 5
+        inputs: [bộ lọc thời gian, đơn vị, loại hồ sơ, trạng thái]
+        outputs: [dashboard, báo cáo Excel/PDF]
+        validations: [người dùng chỉ xem dữ liệu trong phạm vi quyền]
+        permissions: [Legal Manager xem tổng hợp, Business User xem dữ liệu của mình]
+        audit_events: [export báo cáo]
+        business_rules: [báo cáo phải phản ánh trạng thái dữ liệu realtime hoặc theo kỳ đồng bộ]
+      - name: Quản trị phân quyền và cấu hình tích hợp
+        description: Quản trị user/role, MFA, phân quyền theo đơn vị, cấu hình AD/Azure, eOffice, PMS, SmartCA và AI provider.
+        complexity: Complex
+        manday: 8
+        inputs: [user, role, permission matrix, integration config]
+        outputs: [permission setup, integration status]
+        validations: [cấu hình tích hợp phải kiểm tra kết nối trước khi kích hoạt]
+        permissions: [Admin cấu hình, Auditor xem audit log]
+        audit_events: [cập nhật phân quyền, cập nhật tích hợp]
+        business_rules: [quyền admin phải được kiểm soát MFA và audit đầy đủ]
+data_entities: [LegalQuestion, AIAnswer, Citation, FAQ, AuthorizationRequest, ContractDraft, ContractReview, ApprovalTask, AppraisalCase, LegalReport, IntegrationConfig, AuditLog]
+assumptions: [PVCFC cung cấp quy trình chi tiết, ma trận phân quyền/phê duyệt, template hợp đồng/ủy quyền và API contract cho eOffice/PMS/AD/Azure/SmartCA/AI provider, AI output là hỗ trợ nghiệp vụ và cần cơ chế review/phê duyệt bởi người có thẩm quyền]
+out_of_scope: [Tư vấn pháp lý tự động không có người duyệt, Cam kết độ chính xác pháp lý tuyệt đối của AI, Tích hợp realtime nếu hệ thống nguồn chưa cung cấp API contract/credential, Mobile native app nếu chỉ yêu cầu mobile responsive]
+allowed_terms: [AI, LegalIQ, GPT, Azure OpenAI, Gemini, eOffice, PMS, AD, Azure, SmartCA, MFA, SSL, API, citation, workflow, audit log, dashboard, RBAC]
+blocked_terms: [RFID, inventory campaign, opportunity forecast]
