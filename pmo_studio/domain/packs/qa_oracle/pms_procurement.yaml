@@ -1,0 +1,47 @@
+adapter_id: pms_procurement
+app_name: PMS Procurement AI Q&A
+default_year: 2026
+metrics:
+  - id: registration_ai_synced_count
+    label: Kế hoạch mua sắm năm đã đồng bộ AI
+    module: Registration
+    source: objectType
+    value_path: Registration
+    filter_hint: QueueAI objectType=Registration; year=2026
+    aliases: [kế hoạch năm, kế hoạch mua sắm năm, registration]
+    question_templates:
+      - Có bao nhiêu kế hoạch mua sắm năm đã được AI ghi nhận trong năm 2026?
+      - Hiện có bao nhiêu kế hoạch năm trong dữ liệu PMS AI?
+    expected_rule: AI phải trả đúng số kế hoạch năm trong QueueAI đã sync và nêu rõ phạm vi năm 2026.
+  - id: request_purchase_ai_synced_count
+    label: Yêu cầu mua sắm đã đồng bộ AI
+    module: RequestPurchase
+    source: objectType
+    value_path: RequestPurchase
+    filter_hint: QueueAI objectType=RequestPurchase; year=2026
+    aliases: [yêu cầu mua sắm, YCMS, request purchase]
+    question_templates:
+      - Có bao nhiêu yêu cầu mua sắm đã được AI ghi nhận trong năm 2026?
+      - Hiện có bao nhiêu YCMS trong dữ liệu PMS AI?
+    expected_rule: AI phải trả đúng số YCMS trong QueueAI đã sync và nêu rõ phạm vi năm 2026.
+  - id: request_order_ai_synced_count
+    label: Đơn hàng mua sắm đã đồng bộ AI
+    module: RequestOrder
+    source: objectType
+    value_path: RequestOrder
+    filter_hint: QueueAI objectType=RequestOrder; year=2026
+    aliases: [đơn hàng, đơn hàng chi tiết, PO, hợp đồng, request order]
+    question_templates:
+      - Có bao nhiêu đơn hàng mua sắm đã được AI ghi nhận trong năm 2026?
+      - Hiện có bao nhiêu đơn hàng chi tiết trong dữ liệu PMS AI?
+    expected_rule: AI phải trả đúng số đơn hàng RequestOrder trong QueueAI đã sync và nêu rõ phạm vi năm 2026.
+  - id: queue_ai_total
+    label: Tổng dữ liệu PMS đã đồng bộ AI
+    module: QueueAI
+    source: results.QueueAI
+    value_path: fetched
+    filter_hint: QueueAI all object types; year=2026
+    test_type: B - Tổng hợp, tính toán
+    question_templates:
+      - Tổng cộng có bao nhiêu dữ liệu PMS đã được AI ghi nhận trong năm 2026?
+    expected_rule: AI phải trả đúng tổng QueueAI và/hoặc breakdown theo objectType.

@@ -56,6 +56,7 @@ from pmo_studio.model.detailed_quotation import generate_detailed_quotation
 from pmo_studio.advisory.council import run_advisory_council, save_council_result
 from pmo_studio.advisory.profiles import load_advisor_profiles
 from pmo_studio.webdoc.ingest import ingest_webdoc_discovery
+from pmo_studio.qa_oracle.cli import cmd_qa_oracle
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -824,6 +825,26 @@ def build_parser():
     wdi.add_argument("slug", nargs="?")
     wdi.add_argument("--discovery-dir", required=True, help="Directory containing read-only browser/web-doc-agent JSON capture files")
     wdi.set_defaults(func=cmd_webdoc_ingest)
+    qor = sub.add_parser("qa-oracle", help="Generic oracle/snapshot-backed QA testcase workflow")
+    qor_sub = qor.add_subparsers(dest="action", required=True)
+    qor_snap = qor_sub.add_parser("snapshot", help="Build normalized oracle snapshot from adapter + raw JSON")
+    qor_snap.add_argument("--adapter", required=True, help="YAML/JSON oracle adapter mapping metrics to raw data paths")
+    qor_snap.add_argument("--raw-json", required=True, help="Raw snapshot JSON from a read-only data/API capture")
+    qor_snap.add_argument("--out", required=True, help="Output oracle_snapshot.json")
+    qor_snap.set_defaults(func=cmd_qa_oracle)
+    qor_gen = qor_sub.add_parser("generate", help="Generate oracle-aware testcase workbook")
+    qor_gen.add_argument("--adapter", required=True)
+    qor_gen.add_argument("--snapshot", required=True)
+    qor_gen.add_argument("--out", required=True)
+    qor_gen.add_argument("--project", default="Oracle-backed QA")
+    qor_gen.add_argument("--module", default="AI Q&A")
+    qor_gen.set_defaults(func=cmd_qa_oracle)
+    qor_q = qor_sub.add_parser("quality", help="Quality gate for oracle-aware testcase workbook")
+    qor_q.add_argument("--workbook", required=True)
+    qor_q.add_argument("--out", default=None)
+    qor_q.add_argument("--min-cases", type=int, default=1)
+    qor_q.add_argument("--no-require-oracle-sheet", action="store_true")
+    qor_q.set_defaults(func=cmd_qa_oracle)
     adv = sub.add_parser("advisory", help="Run SnailBot-led advisory council dry-runs")
     adv_sub = adv.add_subparsers(dest="action", required=True)
     aprof = adv_sub.add_parser("profiles", help="List advisory council profiles")
