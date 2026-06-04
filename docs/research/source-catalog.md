@@ -1,6 +1,6 @@
 # PMO Studio Research Source Catalog
 
-Generated: `2026-05-16T04:29:42.932616+00:00`
+Generated: `2026-06-01T02:15:06.398670+00:00`
 
 This catalog is for PMO Studio improvement research. Do not copy third-party content unless license status allows adaptation and attribution is preserved.
 

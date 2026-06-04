@@ -59,6 +59,30 @@ The demo uses the bundled source brief at [`examples/asset-management-source.md`
 
 For normal customer work, prefer the [Golden Path](docs/golden-path.md). Review [Known Limitations](docs/known-limitations.md) before sending externally.
 
+### Web-doc-agent discovery ingest
+
+PMO Studio can ingest read-only browser/web-doc-agent discovery captures and turn them into governed BA QA artifacts. The crawler/browser phase remains outside PMO Studio; PMO Studio shapes the evidence into Markdown + Excel test case packs.
+
+```bash
+python -m pmo_studio.cli --root /tmp/pmo-demo init pms-ai-webdoc \
+  --customer 'PVCFC' \
+  --product 'PMS AI' \
+  --brief 'AI statistical QA from web-doc-agent discovery'
+
+python -m pmo_studio.cli --root /tmp/pmo-demo webdoc-ingest pms-ai-webdoc \
+  --discovery-dir /path/to/web-doc-agent/discovery/browser
+```
+
+Generated artifacts:
+
+```text
+artifacts/ba/05-test-cases.md
+artifacts/ba/05-test-cases.xlsx
+artifacts/webdoc/discovery-summary.md
+```
+
+Guardrails: ingest is evidence-only and read-only; it does not log in, submit, approve, create, edit, or delete target application data.
+
 ### Manual flow
 
 ```bash

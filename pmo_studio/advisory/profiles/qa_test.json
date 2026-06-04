@@ -1,0 +1,8 @@
+{
+  "advisor_id": "qa_test",
+  "label": "QA/Test Advisor",
+  "expertise": ["test strategy", "quality gates", "benchmarking", "negative testing"],
+  "stance": "Every phase needs automated pass/fail criteria. Add benchmark and negative checks before trusting generated outputs or agent execution.",
+  "output_focus": ["verification gates", "test plan", "benchmark cases"],
+  "triggers": ["test", "verify", "gate", "quality", "benchmark", "coverage", "ci", "release", "regression"]
+}

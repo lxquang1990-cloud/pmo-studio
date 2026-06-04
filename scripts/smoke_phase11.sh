@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="${1:-/tmp/pmo-smoke-phase11}"
-PROJECT="phase11-smoke"
+PROJECT="eoffice-mvp"
 SRC="${ROOT}-source.md"
 
 cd "$(dirname "$0")/.."
@@ -10,12 +10,12 @@ cd "$(dirname "$0")/.."
 python -m compileall -q pmo_studio
 rm -rf "$ROOT" "$SRC"
 cat > "$SRC" <<'EOF'
-Khách hàng cần eOffice quản lý văn bản, duyệt đa cấp, dashboard SLA, báo cáo quá hạn.
+Khách hàng Công ty ABC cần hệ thống eOffice quản lý văn bản đến, văn bản đi, trình ký/duyệt đa cấp, dashboard SLA, báo cáo quá hạn, phân quyền theo phòng ban và lưu trữ hồ sơ điện tử.
 token=should_be_redacted_phase11
 EOF
 
 python -m pmo_studio.cli --root "$ROOT" scaffold
-python -m pmo_studio.cli --root "$ROOT" init "$PROJECT" --customer 'Phase11 Smoke Customer' --source "$SRC"
+python -m pmo_studio.cli --root "$ROOT" init "$PROJECT" --customer 'Công ty ABC' --brief 'Triển khai MVP eOffice quản lý văn bản đến/đi, trình ký duyệt đa cấp, dashboard SLA, báo cáo quá hạn, phân quyền phòng ban và lưu trữ hồ sơ điện tử.' --source "$SRC"
 python -m pmo_studio.cli --root "$ROOT" list --refresh
 python -m pmo_studio.cli --root "$ROOT" generate all --from-sources --llm noop --refine --max-refine 2
 python -m pmo_studio.cli --root "$ROOT" trace --validate

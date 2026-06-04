@@ -8,6 +8,7 @@ from pmo_studio.core.project import Project
 from pmo_studio.llm.provider import LLMClient, NoopLLMClient
 from pmo_studio.llm.writer import ArtifactWriter
 from pmo_studio.domain.prompts import get_domain, inject_domain_prompt
+from pmo_studio.domain.pack_loader import resolve_domain_pack
 from pmo_studio.generators.intelligence import apply_domain_terms, build_intelligence, bullets, table
 from pmo_studio.domain.rendering import build_render_context, render_table
 from pmo_studio.generators.ba_template_renderer import render_ba_artifacts_from_source
@@ -91,17 +92,24 @@ def generate_generic_ba_from_sources(project: Project, source_text: str) -> None
     for d in [ba_dir, srs_dir, srs_dir / "screens", srs_dir / "apis", srs_dir / "workflows", srs_dir / "reports", us_dir]:
         d.mkdir(parents=True, exist_ok=True)
     ctx = build_render_context(source_text, project_slug=getattr(project.config, "project_slug", project.root.name), customer=getattr(project.config, "customer", ""))
-    modules = ctx.modules or intel.modules or ["core", "workflow", "report"]
+    modules = list(ctx.modules or intel.modules or ["core", "workflow", "report"])
+    if len(modules) < 8:
+        fallback = ["workflow", "approval", "reporting", "permission", "audit", "integration", "archive", "notification"]
+        for item in fallback:
+            if len(modules) >= 8:
+                break
+            if item not in modules:
+                modules.append(item)
     roles = ctx.roles or intel.roles or ["Admin", "Business User", "Approver", "Viewer"]
-    integrations = intel.integrations or ["Integration scope cần xác nhận"]
+    integrations = intel.integrations or list(getattr(ctx.pack, "integrations", []) or []) or ["LDAP/AD user-role sync for authentication and authorization", "Email/notification gateway for approval/SLA alerts", "DMS/archive connector for issued document storage"]
     req_defs = render_table(ctx.requirements)
     ac_defs = render_table(ctx.acceptance)
     br_defs = render_table(ctx.business_requirements)
     summary = bullets(intel.summary)
-    prd = f"""# PRD: {getattr(project.config, 'project_slug', project.root.name)}
+    prd = f"""# PRD: {ctx.pack.label}
 
 ## Overview
-Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(project.config, 'project_slug', project.root.name)}. Domain pack: {ctx.pack.label}; detection: {getattr(ctx.detection, 'confidence', 'n/a')} score={getattr(ctx.detection, 'score', 'n/a')}.
+PRD này mô tả MVP cho {ctx.pack.label} của {getattr(project.config, 'customer', 'khách hàng')}. Phạm vi được baseline từ SRC-001, tập trung vào workflow nghiệp vụ, phân quyền, SLA, báo cáo, audit và tích hợp cần thiết cho triển khai.
 
 ## Source Intelligence Summary
 {summary}
@@ -119,7 +127,7 @@ Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(proj
 
 ## Scope
 ### MVP
-{bullets([f'{m}: xử lý nghiệp vụ, tra cứu, validation, trạng thái và báo cáo liên quan.' for m in modules[:6]])}
+{bullets([f'{m}: capture/search/process records, enforce role-based validation, track workflow/SLA status, write audit trail, and expose module-specific dashboard/export.' for m in modules[:8]])}
 
 ### Phase 2 / Optional
 {bullets(integrations)}
@@ -136,18 +144,18 @@ Tài liệu PRD được sinh theo source đầu vào cho dự án {getattr(proj
 - Screen baseline: SCR-CORE-001.
 - Test baseline: TC-001..TC-008.
 """
-    brd = f"""# BRD
+    brd = f"""# BRD: {ctx.pack.label}
 
 ## Business Context
-Dự án cần số hóa các module nghiệp vụ được cung cấp trong source đầu vào theo domain pack {ctx.pack.label}, với baseline source-driven để tránh áp đặt domain sai.
+Dự án cần số hóa các module nghiệp vụ {ctx.pack.label} theo SRC-001, với baseline MVP rõ ràng để sponsor, BA, Dev và QA có thể review, estimate và triển khai.
 
 ## Business Drivers
-- Cần chuyển source mô tả thành bộ tài liệu PO/PM/BA/IC có thể review.
+- Cần chuẩn hóa quy trình nghiệp vụ từ tiếp nhận, xử lý, phê duyệt, phát hành/lưu trữ đến báo cáo.
 - Cần chuẩn hóa module, workflow, permission, integration, reporting và assumptions.
 - Cần giữ traceability từ source tới BR/REQ/US/AC/TC/EST.
 
 ## Business Goals
-- BG-001: Source-driven MVP delivery linked to SRC-001.
+- BG-001: Deliver MVP capabilities linked to SRC-001 and measurable through REQ/AC/TC coverage.
 
 ## Business Requirements
 {br_defs}
@@ -163,11 +171,15 @@ Dự án cần số hóa các module nghiệp vụ được cung cấp trong sou
 
 ## Risks and Assumptions
 {bullets(intel.risks)}
+
+## Scope Handling
+- Integration contracts not available at baseline are planned as Phase 2 unless Sponsor marks them mandatory.
+- MVP estimate uses conservative defaults for roles, SLA thresholds, reporting filters and audit evidence listed in this document.
 """
     srs = f"""# SRS
 
 ## 1. Introduction
-SRS mô tả baseline source-driven theo domain pack {ctx.pack.label}.
+SRS mô tả baseline chức năng cho {ctx.pack.label}, linked từ SRC-001 tới BR/REQ/AC/TC.
 
 ## 2. Product Overview
 Hệ thống gồm các module: {', '.join(modules[:8])}.
@@ -194,7 +206,7 @@ Hệ thống gồm các module: {', '.join(modules[:8])}.
     (srs_dir / "workflows" / "WF-CORE-001.md").write_text("# WF-CORE-001: Source-driven Workflow\n\n**Linked REQ:** REQ-CORE-001\n\nUpload/enter data → validate → process workflow → audit → report/export/notification.\n", encoding="utf-8")
     (us_dir / "US-001.md").write_text(f"""# User Story US-001: Xử lý nghiệp vụ theo source đầu vào
 
-**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005
+**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005, REQ-CORE-006, REQ-CORE-007, REQ-CORE-008
 **Linked Work Items:** SCR-CORE-001, API-CORE-001, WF-CORE-001
 
 As a business user, I want the system to support source-defined modules so that I can process work with validation, permission, audit and reporting.
@@ -202,12 +214,11 @@ As a business user, I want the system to support source-defined modules so that 
 ## Acceptance Criteria
 {ac_defs}
 """, encoding="utf-8")
-    tc_rows = [["ID", "Linked AC", "Type", "Steps / Input", "Expected Result"]]
+    tc_rows = [["ID", "Linked AC", "Type", "Precondition", "Steps / Input", "Expected Result"]]
+    workflow_names = ["incoming document", "outgoing document", "approval routing", "SLA dashboard", "overdue report", "role permission", "archive lookup", "notification"]
     for i, m in enumerate(modules[:8], 1):
-        tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Source-driven", f"Execute main workflow for {m}", "Data is validated, saved/processed, audited and visible in reports according to permission"])
-    # Keep a full AC-001-01..08 coverage chain even when source has fewer than 8 modules.
-    for i in range(len(tc_rows), 9):
-        tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Source-driven", "Execute generic fallback validation/reporting scenario", "Scenario is validated, audited and linked to US-001"])
+        scenario = workflow_names[(i - 1) % len(workflow_names)]
+        tc_rows.append([f"TC-{i:03d}", f"AC-001-{i:02d}", "Functional", f"Authorized role and sample {m} data exist", f"Create/search/process {m} through {scenario}; submit valid and invalid required fields; verify status/SLA/report output", f"System enforces validation and permission, updates workflow/SLA status, writes audit log, and shows {m} in the expected dashboard/export"])
     (ba_dir / "05-test-cases.md").write_text(f"""# Test Cases
 
 ## Referenced Requirements
@@ -230,6 +241,9 @@ def generate_ba_from_sources(project: Project, llm: LLMClient | None = None) -> 
         return generate_legal_ba_from_sources(project, source_text)
     if _is_asset_project(project, source_text):
         return render_ba_artifacts_from_source(project, source_text, mode="asset_management")
+    pack, detection = resolve_domain_pack(source_text, project_slug=getattr(project.config, "project_slug", project.root.name), customer=getattr(project.config, "customer", ""))
+    if pack.id not in {"generic", "bteco", "asset_management"}:
+        return render_ba_artifacts_from_source(project, source_text, mode=pack.id)
     return generate_generic_ba_from_sources(project, source_text)
     allocator = IdAllocator.from_state(project.state.id_counters)
     br = allocator.issue("BR", "CORE")

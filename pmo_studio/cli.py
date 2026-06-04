@@ -53,6 +53,9 @@ from pmo_studio.model.generators import generate_srs_from_model, generate_storie
 from pmo_studio.model.quality import write_quality_v3
 from pmo_studio.model.delivery_pack import export_delivery_pack
 from pmo_studio.model.detailed_quotation import generate_detailed_quotation
+from pmo_studio.advisory.council import run_advisory_council, save_council_result
+from pmo_studio.advisory.profiles import load_advisor_profiles
+from pmo_studio.webdoc.ingest import ingest_webdoc_discovery
 
 DEFAULT_LLM_PROVIDER = "auto"
 DEFAULT_LLM_MODEL = "Tier2"
@@ -563,6 +566,37 @@ def cmd_telegram(args):
         out = build_delivery_manifest(p.root, chat_id=args.chat_id)
         print(f"Telegram delivery manifest: {out}")
 
+def cmd_webdoc_ingest(args):
+    args.slug = _resolve_slug(args)
+    p = Project.load(args.slug, root_base=Path(args.root))
+    result = ingest_webdoc_discovery(p.root, Path(args.discovery_dir))
+    print(f"WebDoc ingest: screens={result.screens} test_cases={result.test_cases}")
+    print(f"Markdown: {result.markdown}")
+    print(f"Excel: {result.workbook}")
+    print(f"Discovery: {result.discovery_summary}")
+
+
+def cmd_advisory(args):
+    if args.action == "profiles":
+        for profile in load_advisor_profiles():
+            print(f"{profile.advisor_id}\t{profile.label}\texpertise={','.join(profile.expertise)}")
+    elif args.action == "run":
+        request_text = args.request or ""
+        if args.request_file:
+            request_text = Path(args.request_file).read_text(encoding="utf-8")
+        if not request_text.strip():
+            raise SystemExit("Provide --request or --request-file")
+        result = run_advisory_council(request_text, max_advisors=args.max_advisors)
+        paths = save_council_result(result, Path(args.out_dir))
+        print(f"Advisory council: {result.council_id}")
+        print(f"Selected advisors: {', '.join(result.selected_advisors)}")
+        print(f"Agreement: {result.conflict_report.agreement_level}")
+        print(f"Requires discussion: {result.conflict_report.requires_discussion_round}")
+        print(f"Requires human escalation: {result.conflict_report.requires_human_escalation}")
+        print(f"JSON: {paths['json']}")
+        print(f"Markdown: {paths['markdown']}")
+
+
 def cmd_domains(args):
     if args.action == "list":
         for row in list_domains():
@@ -786,6 +820,20 @@ def build_parser():
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8765)
     web.set_defaults(func=cmd_web)
+    wdi = sub.add_parser("webdoc-ingest", help="Ingest web-doc-agent/browser discovery into BA test case artifacts")
+    wdi.add_argument("slug", nargs="?")
+    wdi.add_argument("--discovery-dir", required=True, help="Directory containing read-only browser/web-doc-agent JSON capture files")
+    wdi.set_defaults(func=cmd_webdoc_ingest)
+    adv = sub.add_parser("advisory", help="Run SnailBot-led advisory council dry-runs")
+    adv_sub = adv.add_subparsers(dest="action", required=True)
+    aprof = adv_sub.add_parser("profiles", help="List advisory council profiles")
+    aprof.set_defaults(func=cmd_advisory)
+    arun = adv_sub.add_parser("run", help="Run an offline advisory council and write decision brief")
+    arun.add_argument("--request", default=None)
+    arun.add_argument("--request-file", default=None)
+    arun.add_argument("--out-dir", default=".pmo/advisory")
+    arun.add_argument("--max-advisors", type=int, default=5)
+    arun.set_defaults(func=cmd_advisory)
     tg = sub.add_parser("telegram", help="Prepare Telegram delivery manifests without sending tokens/messages")
     tg_sub = tg.add_subparsers(dest="action", required=True)
     ting = tg_sub.add_parser("ingest")

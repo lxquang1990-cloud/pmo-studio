@@ -7,6 +7,15 @@
 - Added golden path, known limitations, and product hardening documentation.
 - Added non-UX hardening checks for version consistency and export/source privacy.
 - Added real-world benchmark foundation for customer-style PMO output evaluation.
+- Added SnailBot-led Advisory Council dry-run module for Vibe Code workflows.
+- Added web-doc-agent discovery ingest workflow for read-only browser captures.
+- Added PMS AI Q&A Excel testcase exporter using the final BA/QA-facing template: 4 sheets, one consolidated testcase sheet, 15 canonical columns, cleaned actual AI answer, normalized status, and no raw API/debug columns.
+- Documented PMS AI testcase template rules and AI Agent Tester quality gates.
+
+### Verification
+- `PYTHONPATH=. python -m compileall -q pmo_studio` PASS.
+- `PYTHONPATH=. pytest -q` PASS — 171 tests.
+- CLI smoke for `webdoc-ingest` PASS; generated `artifacts/ba/05-test-cases.xlsx` with sheets `00_Bia`, `00_TomTat_KetQua_Test`, `01_ChuThich`, `02_TatCa_TestCases`.
 
 ## 1.0.0 - 2026-05-14
 
@@ -87,3 +96,11 @@
 - `scripts/smoke_phase11.sh` PASS.
 - `scripts/benchmark.sh` PASS, benchmark score 94.12%.
 - `scripts/negative_checks.py` PASS.
+
+## Unreleased
+
+### Added
+- Added SnailBot-led Advisory Council dry-run module for Vibe Code workflows.
+- Added deterministic advisor profiles: Architect, Security, BA/Product, QA/Test, DevOps/Release, UX/HITL.
+- Added `pmo-studio advisory profiles` and `pmo-studio advisory run` CLI commands.
+- Added `docs/advisory-council.md` documenting the SnailBot-as-CEO replacement and first advisory slice.

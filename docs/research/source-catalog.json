@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T04:29:42.931837+00:00",
+  "generated_at": "2026-06-01T02:15:06.397020+00:00",
   "entries": [
     {
       "name": "OWASP user security stories",
@@ -13,7 +13,7 @@
       "risk": "low",
       "action": "Candidate for adapted rubric/template with attribution.",
       "notes": "May be adapted with attribution and license notice.",
-      "fetched_at": "2026-05-16T04:29:39.859688+00:00"
+      "fetched_at": "2026-06-01T02:15:01.546246+00:00"
     },
     {
       "name": "Canaxess accessibility acceptance criteria",
@@ -27,7 +27,7 @@
       "risk": "medium",
       "action": "Manual review before implementation.",
       "notes": "No clear license found; do not copy/adapt content.",
-      "fetched_at": "2026-05-16T04:29:39.859688+00:00"
+      "fetched_at": "2026-06-01T02:15:01.546246+00:00"
     },
     {
       "name": "inDriver handbook acceptance criteria",
@@ -41,7 +41,7 @@
       "risk": "low",
       "action": "Candidate for adapted rubric/template with attribution.",
       "notes": "May be adapted with attribution and license notice.",
-      "fetched_at": "2026-05-16T04:29:39.859688+00:00"
+      "fetched_at": "2026-06-01T02:15:01.546246+00:00"
     },
     {
       "name": "Jam01 SRS Template",
@@ -55,7 +55,7 @@
       "risk": "medium",
       "action": "Manual review before implementation.",
       "notes": "License requires manual compatibility review.",
-      "fetched_at": "2026-05-16T04:29:39.859688+00:00"
+      "fetched_at": "2026-06-01T02:15:01.546246+00:00"
     },
     {
       "name": "RequirementLinter",
@@ -69,7 +69,7 @@
       "risk": "low",
       "action": "Candidate for adapted rubric/template with attribution.",
       "notes": "May be adapted with attribution and license notice.",
-      "fetched_at": "2026-05-16T04:29:39.859688+00:00"
+      "fetched_at": "2026-06-01T02:15:01.546246+00:00"
     }
   ]
 }

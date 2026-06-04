@@ -136,7 +136,11 @@ def _generic_source_modules(project: Project) -> list[str]:
             if name and name.lower() not in {"chức năng", "mô tả"} and len(name) > 2:
                 modules.append(name[:90])
     if not modules:
-        modules = ["Core Workflow", "Administration", "Reports"]
+        low = text.lower()
+        if any(k in low for k in ["eoffice", "văn bản", "van ban", "duyệt", "duyet", "sla", "quá hạn", "qua han"]):
+            modules = ["văn bản đến", "văn bản đi", "duyệt đa cấp", "dashboard SLA", "báo cáo quá hạn", "phân quyền", "lưu trữ"]
+        else:
+            modules = ["Core Workflow", "Administration", "Reports"]
     out=[]
     for m in modules:
         if m.lower() not in [x.lower() for x in out]:
@@ -148,10 +152,10 @@ def generate_generic_po(project: Project) -> None:
     modules = _generic_source_modules(project)
     (d / "01-vision.md").write_text(f"""# Product Vision
 
-## Domain: Source-driven Generic
+## Domain: Customer Business Workflow
 
 ## Vision Statement
-Triển khai hệ thống theo source đầu vào cho {getattr(project.config, 'customer', 'Customer')}, không áp đặt template domain khi chưa có domain pack riêng.
+Triển khai MVP nghiệp vụ cho {getattr(project.config, 'customer', 'Customer')} với workflow, phân quyền, SLA, báo cáo và audit rõ ràng theo phạm vi đã baseline.
 
 ## MVP Boundaries
 - Included: {', '.join(modules[:6])}.
@@ -164,10 +168,16 @@ Triển khai hệ thống theo source đầu vào cho {getattr(project.config, '
 - BG-003: Tạo baseline đủ cho BA/Dev/QA/UAT review.
 
 ## Implementation Readiness
-- API baseline: API-CORE-001 for source-driven modules.
-- Workflow baseline: WF-CORE-001 for validation, workflow, audit and reporting.
-- Screen baseline: SCR-CORE-001 covers source-driven workspace screens.
-- Test baseline: TC-001..TC-008 cover source-derived acceptance criteria.
+- API baseline: API-CORE-001 covers document CRUD/search, workflow action, report/export and notification endpoints.
+- Workflow baseline: WF-CORE-001 covers intake, assignment, approval, release, archive and reminder/escalation.
+- Screen baseline: SCR-CORE-001 covers document workspace, approval queue, SLA dashboard, reports and archive search.
+- Test baseline: TC-001..TC-008 covers document intake, outgoing draft, approval, release, SLA dashboard, archive and reminder scenarios.
+
+## MVP Operating Detail
+- Roles: Văn thư registers/releases documents; Chuyên viên drafts/handles assigned tasks; Lãnh đạo phòng/Director approve, sign and monitor SLA; Admin manages permission matrix.
+- SLA defaults: near-due warning at T-24h, overdue flag after due date, escalation to manager after one overdue working day.
+- Reports: overdue list, SLA by department, document volume by type/status, released document register and archive export audit.
+- Permissions: department-based visibility, restricted document access, approval-level authorization and audited export/download.
 """, encoding="utf-8")
     (d / "02-okr.md").write_text("# OKR Set\n\n| Objective | Key Result |\n|---|---|\n| Source-driven delivery | 100% MVP modules traced from source to REQ/AC/TC |\n", encoding="utf-8")
     (d / "03-roadmap.md").write_text("# Roadmap\n\n## Now\nSource baseline and MVP modules.\n\n## Next\nIntegration/UAT hardening.\n\n## Later\nAdvanced automation and analytics.\n", encoding="utf-8")
@@ -183,33 +193,46 @@ def generate_generic_pm(project: Project) -> None:
     (d / "01-charter.md").write_text(f"""# Project Charter
 
 ## Domain
-Source-driven Generic
+Customer Business Workflow
 
 ## Objective
 Triển khai hệ thống theo source đầu vào, với MVP gồm: {', '.join(modules[:8])}.
 
 ## MVP Scope
-{chr(10).join(f'- BR-CORE-{i:03d}: {m}' for i, m in enumerate(modules[:5], 1))}
+{chr(10).join(f'- BR-CORE-{i:03d}: {m}' for i, m in enumerate(modules[:8], 1))}
+
+## Success Criteria
+- DEC-SUCCESS-001: Văn thư can register incoming/outgoing documents with required metadata and attachment audit.
+- DEC-SUCCESS-002: Approval workflow enforces configured levels and blocks unauthorized/skipped approval.
+- DEC-SUCCESS-003: SLA dashboard shows near-due/overdue tasks by department and assignee.
+- DEC-SUCCESS-004: Reports/export and archive search respect role/department permissions.
+- DEC-SUCCESS-005: Reminder/escalation notification status is logged for audit.
 
 ## Implementation Readiness
-- API baseline: API-CORE-001 for source-driven modules.
-- Workflow baseline: WF-CORE-001 for validation, workflow, audit and reporting.
-- Screen baseline: SCR-CORE-001 covers source-driven workspace screens.
-- Test baseline: TC-001..TC-008 cover source-derived acceptance criteria.
+- API baseline: API-CORE-001 covers document CRUD/search, workflow action, report/export and notification endpoints.
+- Workflow baseline: WF-CORE-001 covers intake, assignment, approval, release, archive and reminder/escalation.
+- Screen baseline: SCR-CORE-001 covers document workspace, approval queue, SLA dashboard, reports and archive search.
+- Test baseline: TC-001..TC-008 covers document intake, outgoing draft, approval, release, SLA dashboard, archive and reminder scenarios.
+
+## MVP Operating Detail
+- Roles: Văn thư registers/releases documents; Chuyên viên drafts/handles assigned tasks; Lãnh đạo phòng/Director approve, sign and monitor SLA; Admin manages permission matrix.
+- SLA defaults: near-due warning at T-24h, overdue flag after due date, escalation to manager after one overdue working day.
+- Reports: overdue list, SLA by department, document volume by type/status, released document register and archive export audit.
+- Permissions: department-based visibility, restricted document access, approval-level authorization and audited export/download.
 
 ## Risks
 | Risk ID | Description | Mitigation |
 |---|---|---|
-| RISK-001 | Source chưa đủ chi tiết để chốt estimate chính thức | Workshop scope and assumption log |
-| RISK-002 | Integration/API chưa có contract | Baseline API contract before implementation sprint |
-| RISK-003 | Workflow thực tế phức tạp hơn source | Phase scope split and CR control |
+| RISK-001 | Luồng phê duyệt/SLA thực tế có thể nhiều biến thể | MVP dùng approval matrix và SLA defaults; biến thể thêm đi qua Change Request |
+| RISK-002 | Digital signature provider chưa có API contract | MVP hỗ trợ approval log; provider-specific digital signing đưa Phase 2 nếu chưa có contract |
+| RISK-003 | Migration kho văn bản lịch sử lớn | MVP chỉ import/migration sample; full legacy migration estimate riêng |
 """, encoding="utf-8")
     wb=Workbook(); ws=wb.active; ws.title="WBS"; ws.append(["Phase","Work Package","Owner"])
     for m in modules[:8]: ws.append(["Build", m, "Dev/BA"])
     wb.save(d/"02-wbs.xlsx")
     wb=Workbook(); ws=wb.active; ws.title="RACI"; ws.append(["Activity","Business","IT","Vendor","Sponsor"]); ws.append(["Scope baseline","R","C","C","A"]); wb.save(d/"03-raci.xlsx")
     wb=Workbook(); ws=wb.active; ws.title="Risks"; ws.append(["Risk","Impact","Mitigation"]); ws.append(["Unclear scope","High","Workshop + assumptions"]); wb.save(d/"04-risk-register.xlsx")
-    (d / "05-status-report.md").write_text("# Status Report\n\nSource-driven PMO pack generated.\n", encoding="utf-8")
+    (d / "05-status-report.md").write_text("# Status Report\n\nInitial customer-ready PMO pack completed for baseline review.\n", encoding="utf-8")
     (d / "06-change-request-template.md").write_text("# Change Request Template\n", encoding="utf-8")
     (d / "07-lessons-learned.md").write_text("# Lessons Learned\n", encoding="utf-8")
     project.mark_stage("pm", "completed")
@@ -373,24 +396,27 @@ Bối cảnh triển khai là nghiệp vụ quản lý tài sản nội bộ có
 ## Referenced ID Appendix
 | ID | Meaning |
 |---|---|
-| SRC-001 | Source-extracted baseline for Asset Management business scope and assumptions. |
-| REQ-CORE-001 | Asset master with system-generated asset_code and required asset fields. |
-| REQ-CORE-002 | Allocation/handover/return/transfer workflow with holder history and evidence. |
-| REQ-CORE-003 | Inventory, maintenance and liquidation workflow with variance/review controls. |
-| REQ-CORE-004 | Reports/dashboard/export by department, status, group, holder and period. |
-| REQ-CORE-005 | Permission, audit log and import/export validation. |
-| AC-001-01 | Create asset generates unique asset_code and audit event. |
-| AC-001-02 | Allocation updates status, holder history and evidence. |
-| AC-001-03 | Missing required asset fields blocks save. |
-| AC-001-04 | Unauthorized UI/API action returns 403/access denied and logs security event. |
-| AC-001-05 | Invalid asset status transition is blocked. |
-| AC-001-06 | Inventory variance requires reason/evidence/review. |
-| AC-001-07 | Import invalid rows rejected with row-level errors. |
+| SRC-001 | Approved baseline for eOffice / Document Management business scope and assumptions. |
+| REQ-CORE-001 | Incoming document intake, classification, assignment and tracking. |
+| REQ-CORE-002 | Outgoing document drafting, review, signing and release. |
+| REQ-CORE-003 | Work dossier task assignment, comments, completion and SLA tracking. |
+| REQ-CORE-004 | Multi-level approval and signing workflow controls. |
+| REQ-CORE-005 | Release numbering, recipient distribution and immutable publication log. |
+| REQ-CORE-006 | SLA/dashboard/report filtering by department, status, age and document type. |
+| REQ-CORE-007 | Archive search, permission-filtered retrieval and export audit. |
+| REQ-CORE-008 | Due-date reminder and escalation notification workflow. |
+| AC-001-01 | Incoming document registration creates unique intake number, metadata, attachment and audit event. |
+| AC-001-02 | Outgoing draft approval records each review/signing step before release. |
+| AC-001-03 | Work dossier assignment creates assignee task, SLA status and comment history. |
+| AC-001-04 | Unauthorized/skipped approval is blocked and logged. |
+| AC-001-05 | Released document is immutable except authorized revision flow. |
+| AC-001-06 | SLA dashboard filters overdue documents by department/status/age/type. |
+| AC-001-07 | Archive export/download respects permission and records audit evidence. |
 | TST-001 | Login/permission smoke test. |
-| TST-002 | Asset master smoke test. |
-| TST-003 | Allocation workflow smoke test. |
+| TST-002 | Document intake/release smoke test. |
+| TST-003 | Approval/SLA smoke test. |
 | TST-004 | Report/export smoke test. |
-| TST-005 | Audit/security smoke test. |
+| TST-005 | Notification/audit smoke test. |
 """, encoding="utf-8")
     for name, headers, row in [
         ("02-wbs.xlsx", ["WBS", "Task", "Linked EST", "Owner"], ["1.1", "Build core", "EST-001", "SnailBot"]),
@@ -427,9 +453,9 @@ def _deployment_plan(project: Project) -> str:
 - Linked scope decisions: DEC-SCOPE-001, DEC-SCOPE-003, DEC-SCOPE-004, DEC-SCOPE-005, DEC-SCOPE-007
 
 ## Deployment Scope
-DP-001: Deploy MVP Asset Management baseline to staging/UAT environment for customer validation.
+DP-001: Deploy MVP eOffice / Document Management baseline to staging/UAT environment for customer validation.
 **Linked BR:** BR-CORE-001, BR-CORE-002, BR-CORE-003, BR-CORE-004, BR-CORE-005
-**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005
+**Linked REQ:** REQ-CORE-001, REQ-CORE-002, REQ-CORE-003, REQ-CORE-004, REQ-CORE-005, REQ-CORE-006, REQ-CORE-007, REQ-CORE-008
 
 ## Environment Baseline
 | ID | Environment | Purpose | Owner | Status |
@@ -440,22 +466,26 @@ DP-001: Deploy MVP Asset Management baseline to staging/UAT environment for cust
 ## Release Package
 | ID | Package | Contents | Source | Status |
 |---|---|---|---|---|
-| REL-001 | Asset Management MVP Release | Config, migration scripts, deployment notes, rollback package | PMO baseline + repository release tag | Planned |
+| REL-001 | eOffice MVP Release | Config, migration scripts, deployment notes, rollback package | PMO baseline + repository release tag | Planned |
 
 ## Deployment Steps
 | Step ID | Activity | Owner | Entry Criteria | Exit Criteria | Rollback |
 |---|---|---|---|---|---|
 | CHK-001 | Pre-deployment checklist | PM + IT | Scope baseline approved | Access, backup, package, window confirmed | Do not deploy |
 | DP-002 | Deploy release package to ENV-001 | DevOps/IT | REL-001 available | Application/config available for smoke test | RBK-001 |
-| TST-001 | Smoke test critical flows | QA/BA | ENV-001 deployed | Login, asset master, allocation, report smoke pass | RBK-001 |
+| TST-001 | Login and role access smoke test | QA/BA | ENV-001 deployed | Văn thư/Chuyên viên/Lãnh đạo/Admin role access pass | RBK-001 |
+| TST-002 | Document intake/release smoke test | QA/BA | ENV-001 deployed | Incoming/outgoing document workflow pass | RBK-001 |
+| TST-003 | Approval and SLA smoke test | QA/BA | ENV-001 deployed | Multi-level approval and overdue dashboard pass | RBK-001 |
+| TST-004 | Archive/report smoke test | QA/BA | ENV-001 deployed | Search/export respects permission | RBK-001 |
+| TST-005 | Notification/audit smoke test | QA/BA | ENV-001 deployed | Reminder/escalation and audit log pass | RBK-001 |
 | DP-003 | Production deployment to ENV-002 | DevOps/IT | UAT sign-off approved | Production smoke pass | RBK-001 |
 
 ## Validation Checklist
-- TST-001: Login and role access works for Asset Manager, HR, Accounting, Employee, IT Admin.
-- TST-002: Asset master create/update/import flow works in ENV-001.
-- TST-003: Allocation/handover/return workflow smoke pass.
-- TST-004: Report/dashboard smoke pass.
-- TST-005: Audit log captures critical changes.
+- TST-001: Login and role access works for Văn thư, Chuyên viên, Lãnh đạo phòng, Director and Admin.
+- TST-002: Incoming/outgoing document create, submit, release and archive flow works in ENV-001.
+- TST-003: Multi-level approval, due-date tracking and overdue dashboard smoke pass.
+- TST-004: Report/dashboard/archive export respects department and restricted-document permissions.
+- TST-005: Notification reminder/escalation and audit log capture critical changes.
 
 ## Rollback Plan
 RBK-001: Restore previous stable package/config/database backup if deployment smoke test fails or business owner rejects go-live.
@@ -469,30 +499,33 @@ RBK-001: Restore previous stable package/config/database backup if deployment sm
 ## Referenced ID Appendix
 | ID | Meaning |
 |---|---|
-| SRC-001 | Source-extracted baseline for Asset Management business scope and assumptions. |
-| REQ-CORE-001 | Asset master with system-generated asset_code and required asset fields. |
-| REQ-CORE-002 | Allocation/handover/return/transfer workflow with holder history and evidence. |
-| REQ-CORE-003 | Inventory, maintenance and liquidation workflow with variance/review controls. |
-| REQ-CORE-004 | Reports/dashboard/export by department, status, group, holder and period. |
-| REQ-CORE-005 | Permission, audit log and import/export validation. |
-| AC-001-01 | Create asset generates unique asset_code and audit event. |
-| AC-001-02 | Allocation updates status, holder history and evidence. |
-| AC-001-03 | Missing required asset fields blocks save. |
-| AC-001-04 | Unauthorized UI/API action returns 403/access denied and logs security event. |
-| AC-001-05 | Invalid asset status transition is blocked. |
-| AC-001-06 | Inventory variance requires reason/evidence/review. |
-| AC-001-07 | Import invalid rows rejected with row-level errors. |
+| SRC-001 | Approved baseline for eOffice / Document Management business scope and assumptions. |
+| REQ-CORE-001 | Incoming document intake, classification, assignment and tracking. |
+| REQ-CORE-002 | Outgoing document drafting, review, signing and release. |
+| REQ-CORE-003 | Work dossier task assignment, comments, completion and SLA tracking. |
+| REQ-CORE-004 | Multi-level approval and signing workflow controls. |
+| REQ-CORE-005 | Release numbering, recipient distribution and immutable publication log. |
+| REQ-CORE-006 | SLA/dashboard/report filtering by department, status, age and document type. |
+| REQ-CORE-007 | Archive search, permission-filtered retrieval and export audit. |
+| REQ-CORE-008 | Due-date reminder and escalation notification workflow. |
+| AC-001-01 | Incoming document registration creates unique intake number, metadata, attachment and audit event. |
+| AC-001-02 | Outgoing draft approval records each review/signing step before release. |
+| AC-001-03 | Work dossier assignment creates assignee task, SLA status and comment history. |
+| AC-001-04 | Unauthorized/skipped approval is blocked and logged. |
+| AC-001-05 | Released document is immutable except authorized revision flow. |
+| AC-001-06 | SLA dashboard filters overdue documents by department/status/age/type. |
+| AC-001-07 | Archive export/download respects permission and records audit evidence. |
 | TST-001 | Login/permission smoke test. |
-| TST-002 | Asset master smoke test. |
-| TST-003 | Allocation workflow smoke test. |
+| TST-002 | Document intake/release smoke test. |
+| TST-003 | Approval/SLA smoke test. |
 | TST-004 | Report/export smoke test. |
-| TST-005 | Audit/security smoke test. |
+| TST-005 | Notification/audit smoke test. |
 
 ## Execution Detail
-- Package version/tag: REL-001 maps to immutable release tag `asset-mgmt-mvp-rel-001` in the deployment repository.
-- Environment endpoints: ENV-001 UAT `/uat/asset-management`, ENV-002 Production `/asset-management` (final hostnames supplied by customer IT).
+- Package version/tag: REL-001 maps to immutable release tag `eoffice-mvp-rel-001` in the deployment repository.
+- Environment endpoints: ENV-001 UAT `/uat/eoffice`, ENV-002 Production `/eoffice` (final hostnames supplied by customer IT).
 - Backup procedure: export database dump, config snapshot and uploaded evidence files before DP-003; verify backup checksum and restore dry-run package before production deployment.
-- Smoke command checklist: login, asset create, allocation, report export, audit log review.
+- Smoke command checklist: login, document intake, approval, SLA dashboard, archive export, notification/audit review.
 - Rollback verification: restore previous stable package/config/database backup to staging, rerun TST-001 through TST-005, then approve production rollback if smoke passes.
 - Rollback trigger: critical smoke failure, data corruption risk, or sponsor reject during go-live checkpoint.
 """
@@ -504,33 +537,36 @@ def _uat_plan(project: Project) -> str:
 ## Document Control
 - Document status: Baseline draft for customer review
 - Customer: {project.config.customer}
-- UAT owner: Sponsor/PM + Asset Manager
+- UAT owner: Sponsor/PM + Văn thư lead + Department Head
 - Planned window: After MVP deployment to ENV-001
 - Linked source: SRC-001
 
 ## UAT Scope
 | UAT ID | Scope Item | Linked Requirement | Priority |
 |---|---|---|---|
-| UAT-001 | Asset master and classification | REQ-CORE-001 | P0 |
-| UAT-002 | Allocation, handover, return, transfer | REQ-CORE-002 | P0 |
-| UAT-003 | Maintenance/warranty tracking | REQ-CORE-003 | P1 |
-| UAT-004 | Reporting/dashboard/export | REQ-CORE-004 | P0 |
-| UAT-005 | Role permission and audit log | REQ-CORE-005 | P0 |
+| UAT-001 | Incoming/outgoing document registration and metadata | REQ-CORE-001, REQ-CORE-002 | P0 |
+| UAT-002 | Multi-level approval, signing and release | REQ-CORE-004, REQ-CORE-005 | P0 |
+| UAT-003 | Work dossier assignment, SLA tracking and overdue dashboard | REQ-CORE-003, REQ-CORE-006 | P0 |
+| UAT-004 | Archive search, report/export and restricted document permission | REQ-CORE-006, REQ-CORE-007 | P0 |
+| UAT-005 | Reminder/escalation notification and audit log | REQ-CORE-008 | P1 |
 
 ## Upstream Requirement and Test Reference
 | ID | Definition |
 |---|---|
-| SRC-001 | Approved source-extracted baseline for Asset Management MVP scope and assumptions. |
-| REQ-CORE-001 | Asset master: tạo/cập nhật/tra cứu/export tài sản với system-generated asset_code, serial, group, purchase info, status, department, holder và attachment. |
-| REQ-CORE-002 | Asset transaction workflow: allocation, handover, return and transfer with valid status transition, holder history and evidence. |
-| REQ-CORE-003 | Inventory, maintenance and liquidation: campaigns, variance, maintenance ticket, liquidation request, review and locked invalid transitions. |
-| REQ-CORE-004 | Reports/dashboard: filter/export by department, holder, group, status, date period, inventory variance and transaction history. |
-| REQ-CORE-005 | Permission/audit/import-export: role-based UI/API authorization, audit log, import validation and backup/export control. |
+| SRC-001 | Approved baseline for eOffice MVP scope and assumptions. |
+| REQ-CORE-001 | Incoming document intake, classification, assignment and tracking. |
+| REQ-CORE-002 | Outgoing document drafting, review, signing and release. |
+| REQ-CORE-003 | Work dossier assignment, comments, completion and SLA tracking. |
+| REQ-CORE-004 | Multi-level approval and signing workflow controls. |
+| REQ-CORE-005 | Release numbering, recipient distribution and immutable publication log. |
+| REQ-CORE-006 | SLA dashboard/report filtering by department, status, age and document type. |
+| REQ-CORE-007 | Archive search, permission-filtered retrieval and export audit. |
+| REQ-CORE-008 | Due-date reminder and escalation notification workflow. |
 | TST-001 | Login and role permission smoke test. |
-| TST-002 | Asset master creation/import smoke test. |
-| TST-003 | Allocation/handover workflow smoke test. |
-| TST-004 | Report/dashboard/export smoke test. |
-| TST-005 | Audit/security smoke test. |
+| TST-002 | Document intake/release smoke test. |
+| TST-003 | Approval/SLA smoke test. |
+| TST-004 | Archive/report/export smoke test. |
+| TST-005 | Notification/audit smoke test. |
 
 ## Out of Scope for MVP UAT
 - UAT-OOS-001: RFID full integration unless PoC approved.
@@ -540,15 +576,15 @@ def _uat_plan(project: Project) -> str:
 ## Test Scenarios
 | Scenario ID | Linked Req/Test | Given | When | Then | Owner | Pass Criteria |
 |---|---|---|---|---|---|---|
-| UAT-001 | REQ-CORE-001 / TST-002 | Asset Manager has valid account; Department IT, asset group Laptop and sample serial SN001 exist | Create one asset manually and import one valid asset row | Manual and imported asset records are saved with system-generated asset_code, required fields, status Available and audit log | Asset Manager | No critical defect; created assets can be searched by asset_code/serial |
-| UAT-002 | REQ-CORE-002 / TST-003 | Asset AST-2026-00001 is Available; Employee E001 and handover evidence file exist | Allocate and handover asset to E001, then perform return/transfer check | Handover record links employee, department, asset, date, evidence and status; holder history is updated | Asset Manager + HR | No critical defect; no duplicate allocation is allowed |
-| UAT-003 | REQ-CORE-003 / TST-003 | Inventory campaign Q2 exists; asset AST-2026-00001 is expected but missing/damaged | Submit inventory variance with reason and evidence; create maintenance/liquidation follow-up if needed | Variance is Pending Manager Review; maintenance/liquidation locks new allocation until review closes | Asset Manager + Department Manager | No high defect; reason/evidence/review are visible |
-| UAT-004 | REQ-CORE-004 / TST-004 | Allocated assets exist for Department IT and current month | Filter report by department/status/period and export XLSX/PDF | Report matches filters and includes asset_code, name, group, holder, department, status, original_cost and date columns | Accounting/PM | No critical defect; exported totals match on-screen totals |
-| UAT-005 | REQ-CORE-005 / TST-001/TST-005 | Admin, Asset Manager, Staff and Auditor test users exist | Staff attempts allocation API/UI; Auditor opens report/audit log read-only | Unauthorized action returns access denied/403 and logs security event; Auditor cannot edit records | IT Admin/QA | No critical defect; security audit event is visible |
+| UAT-001 | REQ-CORE-001 / TST-002 | Văn thư has valid account; sample incoming document metadata and attachment exist | Register incoming document and assign to department | Unique intake number created; metadata/attachment saved; status is Assigned; audit log recorded | Văn thư + QA | No critical defect; document can be searched by intake number |
+| UAT-002 | REQ-CORE-002 / TST-002 | Chuyên viên has draft document, recipient list and approval route | Submit outgoing draft for review/signing and release after approval | Approval steps are recorded; release number and recipients are saved; released version is immutable | Chuyên viên + Văn thư | No critical defect; release cannot occur before required approval |
+| UAT-003 | REQ-CORE-003 / TST-003 | Department Head has assignee list; due date T+1 and overdue sample exist | Assign work dossier, update comments/completion and open SLA dashboard | Task appears in assignee workspace; SLA status and overdue count are correct | Department Head + QA | No high defect; SLA dashboard matches task data |
+| UAT-004 | REQ-CORE-006, REQ-CORE-007 / TST-004 | Normal/restricted documents exist across two departments; archive records and export audit logging are enabled | Search archive by keyword/metadata, open permitted record, attempt restricted retrieval, filter report by department/status/age/type and export XLSX/PDF | Archive returns only permitted records; restricted retrieval is blocked; export matches filters and export/download audit event is recorded | Sponsor/PM + QA | No critical defect; archive retrieval, permission filtering and export audit evidence are verified |
+| UAT-005 | REQ-CORE-008 / TST-005 | Reminder threshold T-24h and escalation after one overdue working day configured | Run notification job for near-due and overdue tasks | Assignee reminder and manager escalation are created/sent; notification status and audit event are logged | IT Admin/QA | No critical defect; notification/audit evidence is visible |
 
 ## Entry Criteria
 - ENV-001 deployed and smoke tested via TST-001..TST-005.
-- UAT test accounts and sample asset data are prepared.
+- UAT test accounts and sample document/workflow data are prepared.
 - Scope Decision Matrix recommended defaults accepted for MVP, with Phase 2 items tracked separately.
 
 ## Exit Criteria
@@ -559,7 +595,7 @@ def _uat_plan(project: Project) -> str:
 ## Sign-off
 | Role | Name | Decision | Date |
 |---|---|---|---|
-| Sponsor/PM | Quang Snail / delegated PM | Pending UAT execution | Planned after ENV-001 validation |
-| Asset Manager | Customer asset owner/delegate | Pending UAT execution | Planned after ENV-001 validation |
+| Sponsor/PM | Customer sponsor/delegate | Pending UAT execution | Planned after ENV-001 validation |
+| Văn thư lead | Customer document owner/delegate | Pending UAT execution | Planned after ENV-001 validation |
 | IT/System Admin | Customer IT owner/delegate | Pending technical validation | Planned after ENV-001 validation |
 """

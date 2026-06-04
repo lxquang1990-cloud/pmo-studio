@@ -1,7 +1,7 @@
 id: eoffice
 label: eOffice / Document Management
-keywords: [eoffice, văn bản, van ban, công văn, cong van, trình ký, trinh ky, phát hành văn bản]
-modules: [văn bản đến, văn bản đi, hồ sơ công việc, trình ký, phát hành, báo cáo văn bản, lưu trữ]
+keywords: [eoffice, văn bản, van ban, công văn, cong van, trình ký, trinh ky, phát hành văn bản, duyệt đa cấp, duyet da cap, dashboard SLA, báo cáo quá hạn, bao cao qua han, quá hạn, qua han]
+modules: [văn bản đến, văn bản đi, hồ sơ công việc, trình ký, phát hành, báo cáo văn bản, lưu trữ, thông báo nhắc hạn]
 roles:
   Clerk: Văn thư
   Officer: Chuyên viên
@@ -13,27 +13,41 @@ quotation_defaults:
 
 pack_version: 2
 workflows:
-  - incoming document routing
-  - outgoing document drafting approval release
-  - multi-level e-sign review
-  - document archive and retrieval
+  - incoming document intake, classification, assignment and tracking
+  - outgoing document drafting, review, signing and release
+  - work dossier creation, task assignment, comments and completion tracking
+  - multi-level approval and internal signing/approval log workflow
+  - release numbering, recipient distribution and immutable publication log
+  - report filtering by department, status, overdue age and document type
+  - archive search, permission-filtered retrieval and revision history
+  - due-date reminder and escalation notification workflow
 reports:
-  - overdue documents
-  - SLA by department
-  - document volume by type/status
+  - incoming document status and overdue list
+  - outgoing document release dashboard
+  - work dossier progress by assignee and department
+  - approval queue by level and SLA
+  - released document register
+  - SLA by department and overdue age
+  - archive lookup/export audit report
+  - reminder/escalation effectiveness report
 integrations:
   - LDAP/AD
   - Email notification
   - DMS API
-  - Digital signature provider
+  - Digital signature provider (Phase 2)
 risk_factors:
   - legacy document migration
   - delegation/authorization matrix
   - external signing provider SLA
 acceptance_presets:
-  - Unauthorized users cannot view restricted documents
-  - Overdue workflow tasks are visible in dashboard
-  - Released documents are immutable except authorized revision flow
+  - Given Văn thư receives a valid incoming document, when it is registered and assigned, then the system creates a unique intake number, stores metadata/attachment, starts the routing workflow and writes an audit log.
+  - Given Chuyên viên prepares an outgoing draft, when the draft is submitted for review/signing, then each approval step is recorded and the document cannot be released before required approvals are complete.
+  - Given Lãnh đạo phòng assigns a work dossier, when assignee and due date are selected, then the task appears in the assignee workspace with SLA status and comment history.
+  - Given a multi-level approval matrix, when a document is trình ký, then the system routes sequentially by configured level and blocks skipped/unauthorized approval.
+  - Given a document is fully approved/signed, when Văn thư phát hành, then the system assigns release number, records recipients and makes the released version immutable except authorized revision flow.
+  - Given overdue or near-due tasks exist, when user opens dashboard/report, then records can be filtered by department, status, age, document type and exported according to permission.
+  - Given user searches the archive, when filters are applied, then only authorized records are returned and every export/download is audited.
+  - Given a due date threshold is reached, when notification job runs, then assignee/manager receive reminder or escalation and notification status is logged.
 
 capabilities_v2:
   - name: Quản lý văn bản

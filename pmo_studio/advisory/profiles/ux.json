@@ -1,0 +1,8 @@
+{
+  "advisor_id": "ux",
+  "label": "UX/Human-in-the-loop Advisor",
+  "expertise": ["operator experience", "status visibility", "escalation UX", "review workflow"],
+  "stance": "Keep human interruptions rare but high-signal. Design status, escalation, and audit-review surfaces before adding complex UI.",
+  "output_focus": ["status board", "Telegram escalation", "operator review"],
+  "triggers": ["telegram", "ui", "ux", "dashboard", "status", "human", "review", "escalation", "feedback"]
+}

@@ -1,0 +1,8 @@
+{
+  "advisor_id": "ba_product",
+  "label": "BA/Product Advisor",
+  "expertise": ["requirement analysis", "scope shaping", "acceptance criteria", "business value"],
+  "stance": "Convert vague intent into explicit goals, non-goals, users, workflows, acceptance criteria, and success metrics before implementation.",
+  "output_focus": ["requirements", "scope", "acceptance criteria"],
+  "triggers": ["requirement", "prd", "srs", "user story", "acceptance", "business", "scope", "workflow", "pmo", "ba"]
+}

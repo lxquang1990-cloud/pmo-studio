@@ -12,11 +12,10 @@ from pmo_studio.core.ids import IdAllocator
 from pmo_studio.core.project import Project
 from pmo_studio.security.preprocessor import process_source
 from pmo_studio.security.ignore import is_ignored, load_ignore_patterns, write_default_ignore
-from pmo_studio.domain.prompts import get_domain
+from pmo_studio.domain.pack_loader import resolve_domain_pack
 
 
 def generate_stage0(project: Project, brief: str = "TBD", products: list[str] | None = None, sources: list[Path] | None = None) -> None:
-    domain = get_domain(project.config.domain_pack)
     products = products or _infer_products(project.config.project_slug, brief)
     allocator = IdAllocator.from_state(project.state.id_counters)
     write_default_ignore(project.root)
@@ -32,7 +31,8 @@ def generate_stage0(project: Project, brief: str = "TBD", products: list[str] | 
     project.state.id_counters = allocator.counters
 
     source_text = _read_redacted_sources(project.root)
-    intelligence = _extract_stage0_intelligence(project.config.project_slug, brief, source_text)
+    domain_pack, domain_detection = resolve_domain_pack(source_text or brief, project_slug=project.config.project_slug, customer=project.config.customer)
+    intelligence = _extract_stage0_intelligence(project.config.project_slug, brief, source_text, domain_pack=domain_pack)
     project_goal = intelligence["goal"]
     product_lines = "\n".join([f"- [x] {p}" for p in products])
     module_lines = "\n".join([f"- {m}" for m in intelligence["modules"]])
@@ -45,14 +45,18 @@ def generate_stage0(project: Project, brief: str = "TBD", products: list[str] | 
     question_lines = "\n".join([f"- {q['question']} → Recommended: {q['recommended']} ({q['status']})" for q in decision_matrix])
     timeline = intelligence["timeline"]
 
-    domain_roles_str = "\n".join([f"| {role} | {desc} |" for role, desc in (domain.roles or {}).items()]) if domain.roles and domain.domain_id != "bteco" else "| Asset Manager | Quản lý tài sản, cấp phát, thu hồi, điều chuyển, thanh lý |\n| HR | Cung cấp dữ liệu nhân sự, nghỉ việc, điều chuyển, cost center |\n| Accounting | Quản lý nguyên giá, khấu hao, giá trị còn lại, chi phí |\n| Employee | Xác nhận bàn giao/thu hồi và cập nhật tình trạng tài sản |\n| Executive | Xem dashboard, phê duyệt và ra quyết định đầu tư |"
+    domain_roles = domain_pack.roles or {role: desc for role, desc in intelligence["roles"]}
+    domain_roles_str = "\n".join([f"| {role} | {desc} |" for role, desc in domain_roles.items()])
+    req_snapshot = ", ".join([f"REQ-CORE-{i:03d} {m.split(':', 1)[0]}" for i, m in enumerate(intelligence["modules"][:5], 1)])
+    workflow_snapshot = " → ".join([m.split(':', 1)[0] for m in intelligence["modules"][:4]])
+    permission_snapshot = ", ".join([role for role, _desc in intelligence["roles"][:5]])
 
     (project.root / "artifacts/stage-0/project-brief.md").write_text(f"""# Project Brief: {project.config.project_slug}
 
 > **Project Slug:** {project.config.project_slug}
 > **Customer:** {project.config.customer}
 > **Project Type:** {project.config.project_type}
-> **Domain:** Asset Management / Quản lý trang thiết bị, tài sản
+> **Domain:** {domain_pack.label}
 > **Primary Source:** SRC-001
 
 ## 1. Mục tiêu kinh doanh
@@ -70,7 +74,6 @@ def generate_stage0(project: Project, brief: str = "TBD", products: list[str] | 
 
 ### Scope decisions / implementation prerequisites
 - Production code application không nằm trong phạm vi bộ tài liệu; deliverable là hồ sơ PMO/BA/IC client-ready để review, estimate và governance.
-- RFID hardware SDK/vendor-specific integration được phân loại Optional/Phase 2 và chỉ estimate sau PoC thiết bị/vendor.
 - Chữ ký số/chữ ký điện tử có giá trị pháp lý được phân loại Optional/Phase 2 theo provider, license và chính sách nội bộ.
 - Làm sạch dữ liệu legacy quy mô lớn được xử lý qua migration workstream riêng sau data profiling.
 
@@ -97,10 +100,10 @@ def generate_stage0(project: Project, brief: str = "TBD", products: list[str] | 
 - Traceability: SRC/BG → BR → REQ → SCR/API/WF/RPT → US/AC/TC/EST
 
 ## 8. Dev Readiness Snapshot
-- Linked REQ baseline: REQ-CORE-001 asset master, REQ-CORE-002 allocation/return/transfer workflow, REQ-CORE-003 maintenance/inventory/liquidation, REQ-CORE-004 reports, REQ-CORE-005 permission/audit.
-- API/integration baseline: HRM import/export, ERP/accounting sync as Phase 2 unless contract ready, notification for approval and maintenance alerts.
-- Workflow baseline: create asset → allocate/handover → return/transfer → inventory/maintenance → liquidation/reporting.
-- Permission baseline: Admin, Asset Manager, Department Manager, Staff, Auditor.
+- Linked REQ baseline: {req_snapshot}.
+- API/integration baseline: {", ".join(intelligence["integrations"][:3])}.
+- Workflow baseline: {workflow_snapshot}.
+- Permission baseline: {permission_snapshot}.
 
 ## 9. Acceptance / Review Markers
 - Customer-ready: Sponsor/PM xác nhận scope MVP, Phase 2, optional items và exclusions trong Scope Decision Matrix.
@@ -153,11 +156,19 @@ def _infer_products(slug: str, brief: str) -> list[str]:
     return ["PMO/BA Documentation Pack", "Traceability", "Quality Gates", "Client-ready Export"]
 
 
-def _extract_stage0_intelligence(slug: str, brief: str, source_text: str) -> dict:
+def _extract_stage0_intelligence(slug: str, brief: str, source_text: str, *, domain_pack=None) -> dict:
     text = f"{brief}\n{source_text}".strip()
     lower = text.lower()
     is_asset = any(k in lower or k in slug.lower() for k in ["tài sản", "tai san", "trang thiết bị", "ttb", "asset", "khấu hao", "bảo trì"])
-    if is_asset:
+    if domain_pack is not None and getattr(domain_pack, "id", "") not in {"generic", "bteco", "asset_management"}:
+        modules = list(domain_pack.modules or [])[:8] or _top_lines(text)
+        roles = [(role, desc) for role, desc in (domain_pack.roles or {}).items()] or [("Sponsor/PM", "Chốt scope, milestone và nghiệm thu."), ("BA", "Phân tích yêu cầu và tài liệu hóa."), ("Tech Lead", "Review tính khả thi kỹ thuật."), ("QA", "Chuẩn bị test/UAT.")]
+        integrations = list(getattr(domain_pack, "integrations", []) or []) or ["Configured integration baseline theo domain pack."]
+        assumptions = list(getattr(domain_pack, "assumptions", []) or []) or ["Khách hàng xác nhận scope và dữ liệu mẫu trong discovery workshop."]
+        decisions = [f"Stage 0 baseline dùng domain pack {domain_pack.label} và source đầu vào, không dùng nội dung mặc định Asset Management.", "Bắt buộc chạy traceability và Gate A/B/C trước client-ready export."]
+        questions = ["MVP ưu tiên những module nào?", "Luồng phê duyệt/SLA chi tiết theo vai trò là gì?", "Integration nào bắt buộc cho MVP?", "Timeline và budget target?"]
+        goal = brief if brief and brief != "TBD" else f"Xây dựng bộ hồ sơ PMO/BA/IC cho {domain_pack.label} dựa trên source đầu vào."
+    elif is_asset:
         modules = [
             "Quản lý danh mục và hồ sơ tài sản/trang thiết bị: mã tài sản, nhóm, chủng loại, serial, ngày mua, nguyên giá, khấu hao, đơn vị sử dụng, tình trạng.",
             "Quản lý phân bổ, bàn giao và sử dụng tài sản theo nhân viên, phòng ban, mã nhân viên và cost center.",
@@ -230,6 +241,8 @@ def _build_scope_decision_matrix(intelligence: dict) -> list[dict]:
     """Convert Stage-0 open questions into recommended default decisions."""
     goal = intelligence.get("goal", "")
     is_asset = "tài sản" in goal.lower() or "trang thiết bị" in goal.lower()
+    if not is_asset:
+        return _generic_scope_decision_matrix(intelligence)
     if is_asset:
         return [
             {
@@ -317,22 +330,24 @@ def _build_scope_decision_matrix(intelligence: dict) -> list[dict]:
                 "gate_c_blocker": "No nếu dùng planning assumption",
             },
         ]
-    return [
-        {
-            "id": "DEC-SCOPE-001",
-            "question": q,
-            "recommended": "Chốt trong discovery workshop; dùng assumption conservative cho estimate draft.",
-            "options": "TBD",
-            "scope_impact": "TBD",
-            "cost_impact": "TBD",
-            "timeline_impact": "TBD",
-            "owner": "Sponsor/PM",
-            "status": "Open",
-            "gate_c_blocker": "Yes",
-        }
-        for q in intelligence.get("questions", [])
-    ]
 
+
+def _generic_scope_decision_matrix(intelligence: dict) -> list[dict]:
+    rows = []
+    for i, q in enumerate(intelligence.get("questions", []), 1):
+        rows.append({
+            "id": f"DEC-SCOPE-{i:03d}",
+            "question": q,
+            "recommended": "Baseline MVP includes documented workflow, role matrix, SLA/report baseline, and Phase 2 tracking for unapproved integrations.",
+            "options": "A.MVP default | B.Extended scope | C.Defer to Phase 2",
+            "scope_impact": "MVP default keeps delivery estimate bounded; extended scope requires Change Request.",
+            "cost_impact": "MVP default baseline; extended scope estimated separately.",
+            "timeline_impact": "MVP default baseline; Phase 2 items do not block draft delivery.",
+            "owner": "Sponsor/PM",
+            "status": "Recommended default",
+            "gate_c_blocker": "No nếu sponsor chấp nhận default",
+        })
+    return rows
 
 def _write_scope_decision_matrix(path: Path, rows: list[dict]) -> None:
     wb = Workbook()

@@ -1,0 +1,8 @@
+{
+  "advisor_id": "devops",
+  "label": "DevOps/Release Advisor",
+  "expertise": ["CI/CD", "GitHub automation", "release policy", "rollback"],
+  "stance": "Automate repository, PR, CI, and release only after policy levels are defined. Auto-merge must depend on risk tier, not only test pass.",
+  "output_focus": ["CI/CD", "release autonomy", "rollback plan"],
+  "triggers": ["github", "ci/cd", "release", "deploy", "auto-merge", "repo", "branch", "tag", "rollback", "pipeline"]
+}

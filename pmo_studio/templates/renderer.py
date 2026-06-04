@@ -15,4 +15,9 @@ def render_template(template_rel: str, context: dict) -> str:
     normalized = re.sub(r"{{\s*([a-zA-Z0-9_]+)\s*}}", r"${\1}", text)
     data = {k: str(v) for k, v in context.items()}
     data.setdefault("template_version", TEMPLATE_VERSION)
-    return Template(normalized).safe_substitute(data)
+    rendered = Template(normalized).safe_substitute(data)
+    if str(context.get("suppress_metadata", "")).lower() in {"1", "true", "yes"}:
+        rendered = re.sub(r"<!--\s*template_id:.*?-->\n?", "", rendered)
+        rendered = re.sub(r"<!--\s*template_version:.*?-->\n?", "", rendered)
+        rendered = re.sub(r"<!--\s*domain_pack:.*?-->\n?", "", rendered)
+    return rendered
